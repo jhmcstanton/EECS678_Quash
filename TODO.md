@@ -2,24 +2,24 @@
 
 All of these are pulled from the rubric.
 
-1 Executables
-  1 Without args
-  1 With args
-1 Set for environmental variables
+1. Executables
+  1. Without args
+  1. With args
+1. Set for environmental variables
   Specifically *HOME* and *PATH*
-1 *exit* and *quit* commands
-1 Work location management
-  1 cd (with and without args) (chdir function? Could it be that easy?)
-  1 pwd (possibly just need to keep track of starting location and moves in a variable)
-1 Process inheritance
+1. *exit* and *quit* commands
+1. Work location management
+  1. cd (with and without args) (chdir function? Could it be that easy?)
+  1. pwd (possibly just need to keep track of starting location and moves in a variable)
+1. Process inheritance
   Environmental variables are passed to child processes. I assume that this is only
   the initial state of the process environmental variables and that parent and child
   can diverge.
-1 Background / Foreground execution
-1 Pipes
-1 Project Report
+1. Background / Foreground execution
+1. Pipes
+1. Project Report
 
 ## Bonus Stuff
 
-1 Multiple pipes (shouldn't be too bad)
-1 kill command
+1. Multiple pipes (shouldn't be too bad)
+1. kill command
