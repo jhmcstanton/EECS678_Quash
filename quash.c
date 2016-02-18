@@ -24,6 +24,7 @@
 // to private in other languages.
 static bool running;
 
+
 /**************************************************************************
  * Private Functions 
  **************************************************************************/
@@ -64,6 +65,62 @@ bool get_command(command_t* cmd, FILE* in) {
     return false;
 }
 
+/*
+  Call internal builtins 
+ */
+bool handle_command(command_t* cmd){
+    str_arr command_list = mk_str_arr(cmd);
+    int i;
+    char* cursor;
+    // DEFINITELY not correct yet, just barebones
+    for(i = 0; i < command_list.length; i++){
+	cursor = command_list.char_arr[i];
+	if(!strcmp(cursor, "cd")){
+
+	} else if(!strcmp(cursor, "pwd")){
+	    
+	} else if(!strcmp(cursor, "echo")){
+
+	} else if(!strcmp(cursor, "set=")){
+
+	} else if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
+	    printf("Exiting Quash\n");
+	    exit(EXIT_SUCCESS);
+	} else {
+	    printf("Did not match any built in command\n");
+	}
+    }
+    
+    return true;
+}
+
+str_arr mk_str_arr(command_t* cmd){
+    str_arr commands;
+    int i, whitespace_count = 0, command_len = 0;
+
+    // allocate number of strings (only allows up to *NUM_COMMANDS* fields right now!)
+    commands.char_arr = (char**) malloc(NUM_COMMANDS * sizeof(char*));
+    // allocate some space for the strings (fairly arbitrary)
+    for(i = 0; i < NUM_COMMANDS; i++){
+	commands.char_arr[i] = (char*) malloc((MAX_COMMAND_LENGTH / 10) * sizeof(char));	
+    }
+    // count the number of white spaces to get the word count
+    // this will segfault if whitespace_count exceeds 20 or command_len exceeds MAX_COMMAND_LENGTH / 10
+    for(i = 0; i < (cmd->cmdlen) + 1; i++){
+	if(cmd->cmdstr[i] == ' ' || cmd->cmdstr[i] == '\0'){ // found component of command or end
+	    commands.char_arr[whitespace_count][command_len] = '\0';
+	    command_len = 0;
+	    whitespace_count++;
+	} else { // building component of command
+	    commands.char_arr[whitespace_count][command_len] = cmd->cmdstr[i];
+	    command_len++;
+	}
+    }
+    
+    commands.length = whitespace_count;
+    return commands;
+}
+
 /**
  * Quash entry point
  *
@@ -73,7 +130,7 @@ bool get_command(command_t* cmd, FILE* in) {
  */
 int main(int argc, char** argv) { 
   command_t cmd; //< Command holder argument
-  
+      
   start();
   
   puts("Welcome to Quash!");
@@ -85,10 +142,12 @@ int main(int argc, char** argv) {
     // this while loop. It is just an example.
 
     // The commands should be parsed, then executed.
-    if (!strcmp(cmd.cmdstr, "exit"))
+      /*   if (!strcmp(cmd.cmdstr, "exit"))
       terminate(); // Exit Quash
     else 
       puts(cmd.cmdstr); // Echo the input string
+      */
+      handle_command(&cmd);
   }
 
   return EXIT_SUCCESS;

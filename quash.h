@@ -16,6 +16,7 @@
  */
 #define MAX_COMMAND_LENGTH (1024)
 
+
 /**
  * Holds information about a command.
  */
@@ -29,6 +30,12 @@ typedef struct command_t {
 
   // Extend with more fields if needed
 } command_t;
+
+#define NUM_COMMANDS 20
+typedef struct str_arr {
+    char** char_arr;
+    size_t length;
+} str_arr;
 
 /**
  * Query if quash should accept more input or not.
@@ -52,5 +59,22 @@ void terminate();
  *  @return True if able to fill #command_t.cmdstr and false otherwise
  */
 bool get_command(command_t* cmd, FILE* in);
+
+/**
+ * Takes a #command_t struct and parses it into a number of null
+ * terminated character arrays. 
+ * 
+ * @param cmd - a command_t structure. Nothing is modified.
+ * @return a fully instantiated #str_arr
+ */
+str_arr mk_str_arr(command_t* cmd);
+
+/**
+ * Takes a #command_t struct and internally parses it using #mk_str_arr
+ * then dispatches to either builtin commands or executables
+ * @param cmd - a command_t structure. Nothing is modified.
+ * @return True if successful, false otherwise
+ */
+bool handle_command(command_t* cmd);
 
 #endif // QUASH_H
