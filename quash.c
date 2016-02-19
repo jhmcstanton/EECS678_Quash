@@ -8,7 +8,7 @@
  * Included Files
  **************************************************************************/ 
 #include "quash.h" // Putting this above the other includes allows us to ensure
-                   // this file's headder's #include statements are self
+                   // this file's header's #include statements are self
                    // contained.
 
 #include <string.h>
@@ -46,6 +46,54 @@ void terminate() {
   running = false;
 }
 
+/**************************************************************************
+ * Job Stuff
+ **************************************************************************/
+const int MAX_NUM_JOBS = 10; // arbitrary. my system's max is 32768...
+int CUR_NUM_JOBS = 0; // to be incremented/decremented with job creation/deletion
+
+// Job Structure
+struct job_t {
+    pid_t pid; 
+    int jid;
+    char command[MAX_COMMAND_LENGTH];
+};
+struct job_t jobs[MAX_NUM_JOBS]; /* The job list */
+
+void jobs(struct job_t *jobs){
+	int i;
+	for(i = 0; i < MAXJOBS, i++) {
+		printf("[%d] %d %s", jobs->jid, jobs->pid, jobs->command);
+	}
+}
+/* ********************************************************************** */
+
+
+/**************************************************************************
+ * Pipe Stuff
+ **************************************************************************/
+void createPipes(int numPipesNeeded){  // numPipesNeeded is parsed from command line input string
+
+	int fds[i][2];
+
+	// Set up necessary pipes
+	int j;
+	for (j = 0; j < numPipesNeeded; j++){
+		pipe(fds[j]);
+	}
+}
+/* ********************************************************************** */
+
+
+/**************************************************************************
+ * I/O Redirection
+ **************************************************************************/
+// standard output to file, ls > a.txt (>> appends)
+
+// standard input from file, ls < a.txt (<< appends)
+/* ********************************************************************** */
+
+
 bool get_command(command_t* cmd, FILE* in) {
   if (fgets(cmd->cmdstr, MAX_COMMAND_LENGTH, in) != NULL) {
     size_t len = strlen(cmd->cmdstr);
@@ -74,7 +122,7 @@ bool handle_command(command_t* cmd){
     char* cursor;
     // DEFINITELY not correct yet, just barebones
     if(command_list.length >= 1){
-	cursor = command_list.char_arr[0];
+		cursor = command_list.char_arr[0];
 
 	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
 	    printf("Exiting Quash\n");
@@ -89,14 +137,18 @@ bool handle_command(command_t* cmd){
 		
 	    }
 	    free(path);
-	} else if(!strcmp(cursor, "pwd")){
+	} else if(!strcmp(cursor, *)"pwd")){
 	    char* temp_buffer = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
 	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
 	    printf("%s\n", temp_buffer);
 	    free(temp_buffer);
-	} else if(!strncmp(cursor, "set=", 4)){
-
-	} else {
+	} else if(!strncmp(cursor, "set", 4)){
+		
+	} else if(!strncmp(cursor, "jobs")){
+		printf("");
+	} else if(!strncmp(cursor, "echo")){
+		
+	}else {
 	    printf("Did not match any built in command\n");
 	}
     }
