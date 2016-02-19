@@ -23,26 +23,50 @@
 // compilation unit (this file and all files that include it). This is similar
 // to private in other languages.
 static bool running;
+static char terminal_prompt[MAX_COMMAND_LENGTH];
 
 
 /**************************************************************************
  * Private Functions 
  **************************************************************************/
+static void maintenance(){
+    /* This sets up the terminal prompt */
+    char* cwd = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    char* hostname = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    int i, j = 0;
+    // get and trim the current working directory
+    getcwd(cwd, MAX_COMMAND_LENGTH);
+    for(i = 0; i < MAX_COMMAND_LENGTH || cwd[i] != '\0'; i++){
+	if(cwd[i] == '/'){
+	    j = i + 1; 
+	}
+    }
+    shift_str_left(j, cwd);
+    
+    gethostname(hostname, MAX_COMMAND_LENGTH);
+    
+    sprintf(terminal_prompt, "[%s@%s %s]$ ", getlogin(), hostname, cwd);
+    free(cwd);
+    free(hostname);
+    
+}
 /**
  * Start the main loop by setting the running flag to true
  */
 static void start() {
   running = true;
+  maintenance();
 }
+
 
 /**************************************************************************
  * Public Functions 
  **************************************************************************/
-bool is_running() {
+bool is_running(){
   return running;
 }
 
-void terminate() {
+void terminate() {   
   running = false;
 }
 
@@ -58,11 +82,11 @@ struct job_t {
     int jid;
     char command[MAX_COMMAND_LENGTH];
 };
-struct job_t jobs[MAX_NUM_JOBS]; /* The job list */
+//struct job_t jobs[MAX_NUM_JOBS]; /* The job list */
 
-void jobs(struct job_t *jobs){
+void printJobs(struct job_t *jobs){
 	int i;
-	for(i = 0; i < MAXJOBS, i++) {
+	for(i = 0; i < MAX_NUM_JOBS; i++) {
 		printf("[%d] %d %s", jobs->jid, jobs->pid, jobs->command);
 	}
 }
@@ -73,8 +97,7 @@ void jobs(struct job_t *jobs){
  * Pipe Stuff
  **************************************************************************/
 void createPipes(int numPipesNeeded){  // numPipesNeeded is parsed from command line input string
-
-	int fds[i][2];
+	int fds[numPipesNeeded][2];
 
 	// Set up necessary pipes
 	int j;
@@ -118,7 +141,6 @@ bool get_command(command_t* cmd, FILE* in) {
  */
 bool handle_command(command_t* cmd){
     str_arr command_list = mk_str_arr(cmd);
-    int i;
     char* cursor;
     // DEFINITELY not correct yet, just barebones
     if(command_list.length >= 1){
@@ -131,39 +153,73 @@ bool handle_command(command_t* cmd){
 	} else if(!strcmp(cursor, "cd")){
 	    char* path = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
 	    if(command_list.length == 1){ // no path specified, returning to home directory
-		get_home_dir(path);
+			get_home_dir(path);
+			chdir(path);
+	    } else if (root_is_home(command_list.char_arr[1])){ // path is specified and starts with ~
+				cursor = command_list.char_arr[1];
+		shift_str_left(1, cursor);
+		char* helper_str = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+		get_home_dir(helper_str);
+		sprintf(path, "%s%s", helper_str, cursor);
 		chdir(path);
-	    } else { // path is specified		
-		
+		free(helper_str);
+	    } else { // path is specified and absolute
+		strcpy(path, command_list.char_arr[1]);
+		chdir(path);
 	    }
 	    free(path);
-	} else if(!strcmp(cursor, *)"pwd")){
+	} else if(!strcmp(cursor, "pwd")){
 	    char* temp_buffer = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
 	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
 	    printf("%s\n", temp_buffer);
 	    free(temp_buffer);
-	} else if(!strncmp(cursor, "set", 4)){
+	} else if(!strncmp(cursor, "set", 3)){
 		
-	} else if(!strncmp(cursor, "jobs")){
-		printf("");
-	} else if(!strncmp(cursor, "echo")){
+	} else if(!strcmp(cursor, "jobs")){
+
+	} else if(!strcmp(cursor, "echo")){
 		
-	}else {
+	} else if(!strcmp(cursor, "set")){
+
+	} else {
 	    printf("Did not match any built in command\n");
 	}
     }
     free_str_arr(&command_list);    
     return true;
+	
+}
+void shift_str_left(int shamt, char* str){
+    int i;
+    for(i = 0; str[i + shamt - 1] != '\0'; i++){
+	str[i] = str[i + shamt];
+    }
+}
+
+bool starts_with(char c, char* str){
+    if(str == NULL){
+	return false;
+    }
+    return str[0] == c;
+}
+
+bool root_is_home(char* path){
+    return starts_with('~', path);
+}
+
+bool is_env_var_req(char* maybe_var){
+    return starts_with('$', maybe_var);
 }
 
 void get_home_dir(char* buffer){    
     struct passwd *pw = getpwuid(getuid());
     buffer = strcpy(buffer, pw->pw_dir);
-    free(pw);
+//    free(pw);
 }
 
 str_arr mk_str_arr(command_t* cmd){
     str_arr commands;
+    bool last_space_was_whitespace = false; // so commands can be more than one ' ' apart
     int i, whitespace_count = 0, command_len = 0;
 
     // allocate number of strings (only allows up to *NUM_COMMANDS* fields right now!)
@@ -176,10 +232,14 @@ str_arr mk_str_arr(command_t* cmd){
     // this will segfault if whitespace_count exceeds 20 or command_len exceeds MAX_COMMAND_LENGTH / 10
     for(i = 0; i < (cmd->cmdlen) + 1; i++){
 	if(cmd->cmdstr[i] == ' ' || cmd->cmdstr[i] == '\0'){ // found component of command or end
-	    commands.char_arr[whitespace_count][command_len] = '\0';
-	    command_len = 0;
-	    whitespace_count++;
+	    if(!last_space_was_whitespace){
+		commands.char_arr[whitespace_count][command_len] = '\0';
+		command_len = 0;
+		whitespace_count++;
+	    }
+	    last_space_was_whitespace = true;
 	} else { // building component of command
+	    last_space_was_whitespace = false;
 	    commands.char_arr[whitespace_count][command_len] = cmd->cmdstr[i];
 	    command_len++;
 	}
@@ -210,7 +270,7 @@ int main(int argc, char** argv) {
   start();
   
   puts("Welcome to Quash!");
-  puts("Type \"exit\" to quit");
+  printf("Type \"exit\" to quit\n%s", terminal_prompt);
 
   // Main execution loop
   while (is_running() && get_command(&cmd, stdin)) {
@@ -224,6 +284,8 @@ int main(int argc, char** argv) {
       puts(cmd.cmdstr); // Echo the input string
       */
       handle_command(&cmd);
+      maintenance();
+      printf("%s", terminal_prompt);
   }
 
   return EXIT_SUCCESS;

@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <sys/types.h>
 
 /**
  * Specify the maximum number of characters accepted by the command string
@@ -80,6 +81,15 @@ str_arr mk_str_arr(command_t* cmd);
 bool handle_command(command_t* cmd);
 
 /**
+ * Shift a #char* to the left by @param shamt indexes. 
+ * Only shifts until the null character. Does not clean up characters
+ * after null character (some duplication will occur). 
+ * @param shamt - the amount to shift the string by
+ * @param str   - the string to shift
+ */
+void shift_str_left(int shamt, char* str);
+
+/**
  * Frees the internal char*s inside a #str_arr.
  * @param str_arr - a #str_arr to free up. The struct itself is not freed.
  */
@@ -91,5 +101,29 @@ void free_str_arr(str_arr *str_arr);
  * @param buffer - the buffer to fill.
  */
 void get_home_dir(char* buffer);
+
+/**
+ * Helper function to check what a string's first character is, used by other functions.
+ * @param c - the letter to be checked for at index 0 of str.
+ * @param str - the string to check. May be NULL
+ * @returns True if @param str's element 0 is c, otherwise return false.
+ */
+bool starts_with(char c, char* str);
+
+/**
+ * Helper function to check if the caller provided path starts with '~'
+ * @param path - a file path that may or may not contain a '~' at index 0. May be NULL
+ * @returns True if the path starts with '~', false otherwise.
+ */
+bool root_is_home(char* path);
+
+/**
+ * Helper function to check if a string is in the form of a system variable ($XXXXXXX).
+ * Does NO lookup. 
+ * @param maybe_var - the string to analyze. May be NULL.
+ * @returns True if the first character of @param maybe_var is '$', false otherwise.
+ */
+bool is_env_var_req(char* maybe_var);
+
 
 #endif // QUASH_H
