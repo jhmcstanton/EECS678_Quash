@@ -70,7 +70,6 @@ bool get_command(command_t* cmd, FILE* in) {
  */
 bool handle_command(command_t* cmd){
     str_arr command_list = mk_str_arr(cmd);
-    int i;
     char* cursor;
     // DEFINITELY not correct yet, just barebones
     if(command_list.length >= 1){
@@ -85,8 +84,17 @@ bool handle_command(command_t* cmd){
 	    if(command_list.length == 1){ // no path specified, returning to home directory
 		get_home_dir(path);
 		chdir(path);
-	    } else { // path is specified		
-		
+	    } else if (root_is_home(command_list.char_arr[1])){ // path is specified and starts with ~
+		cursor = command_list.char_arr[1];
+		shift_str_left(1, cursor);
+		char* helper_str = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+		get_home_dir(helper_str);
+		sprintf(path, "%s%s", helper_str, cursor);
+		chdir(path);
+		free(helper_str);
+	    } else { // path is specified and absolute
+		strcpy(path, command_list.char_arr[1]);
+		chdir(path);
 	    }
 	    free(path);
 	} else if(!strcmp(cursor, "pwd")){
@@ -94,7 +102,7 @@ bool handle_command(command_t* cmd){
 	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
 	    printf("%s\n", temp_buffer);
 	    free(temp_buffer);
-	} else if(!strncmp(cursor, "set=", 4)){
+	} else if(!strcmp(cursor, "set")){
 
 	} else {
 	    printf("Did not match any built in command\n");
@@ -102,6 +110,13 @@ bool handle_command(command_t* cmd){
     }
     free_str_arr(&command_list);    
     return true;
+}
+
+void shift_str_left(int shamt, char* str){
+    int i;
+    for(i = 0; str[i + shamt - 1] != '\0'; i++){
+	str[i] = str[i + shamt];
+    }
 }
 
 bool starts_with(char c, char* str){
@@ -127,6 +142,7 @@ void get_home_dir(char* buffer){
 
 str_arr mk_str_arr(command_t* cmd){
     str_arr commands;
+    bool last_space_was_whitespace = false; // so commands can be more than one ' ' apart
     int i, whitespace_count = 0, command_len = 0;
 
     // allocate number of strings (only allows up to *NUM_COMMANDS* fields right now!)
@@ -139,10 +155,14 @@ str_arr mk_str_arr(command_t* cmd){
     // this will segfault if whitespace_count exceeds 20 or command_len exceeds MAX_COMMAND_LENGTH / 10
     for(i = 0; i < (cmd->cmdlen) + 1; i++){
 	if(cmd->cmdstr[i] == ' ' || cmd->cmdstr[i] == '\0'){ // found component of command or end
-	    commands.char_arr[whitespace_count][command_len] = '\0';
-	    command_len = 0;
-	    whitespace_count++;
+	    if(!last_space_was_whitespace){
+		commands.char_arr[whitespace_count][command_len] = '\0';
+		command_len = 0;
+		whitespace_count++;
+	    }
+	    last_space_was_whitespace = true;
 	} else { // building component of command
+	    last_space_was_whitespace = false;
 	    commands.char_arr[whitespace_count][command_len] = cmd->cmdstr[i];
 	    command_len++;
 	}
@@ -173,7 +193,7 @@ int main(int argc, char** argv) {
   start();
   
   puts("Welcome to Quash!");
-  puts("Type \"exit\" to quit");
+  puts("Type \"exit\" to quit\n$");
 
   // Main execution loop
   while (is_running() && get_command(&cmd, stdin)) {

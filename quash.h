@@ -80,6 +80,15 @@ str_arr mk_str_arr(command_t* cmd);
 bool handle_command(command_t* cmd);
 
 /**
+ * Shift a #char* to the left by @param shamt indexes. 
+ * Only shifts until the null character. Does not clean up characters
+ * after null character (some duplication will occur). 
+ * @param shamt - the amount to shift the string by
+ * @param str   - the string to shift
+ */
+void shift_str_left(int shamt, char* str);
+
+/**
  * Frees the internal char*s inside a #str_arr.
  * @param str_arr - a #str_arr to free up. The struct itself is not freed.
  */
