@@ -81,11 +81,14 @@ bool handle_command(command_t* cmd){
 	    free_str_arr(&command_list);
 	    exit(EXIT_SUCCESS);
 	} else if(!strcmp(cursor, "cd")){
+	    char* path = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
 	    if(command_list.length == 1){ // no path specified, returning to home directory
-		chdir("~");
+		get_home_dir(path);
+		chdir(path);
 	    } else { // path is specified		
-
+		
 	    }
+	    free(path);
 	} else if(!strcmp(cursor, "pwd")){
 	    char* temp_buffer = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
 	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
@@ -99,6 +102,12 @@ bool handle_command(command_t* cmd){
     }
     free_str_arr(&command_list);    
     return true;
+}
+
+void get_home_dir(char* buffer){    
+    struct passwd *pw = getpwuid(getuid());
+    buffer = strcpy(buffer, pw->pw_dir);
+    free(pw);
 }
 
 str_arr mk_str_arr(command_t* cmd){

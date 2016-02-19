@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <pwd.h>
 
 /**
  * Specify the maximum number of characters accepted by the command string
@@ -82,5 +84,12 @@ bool handle_command(command_t* cmd);
  * @param str_arr - a #str_arr to free up. The struct itself is not freed.
  */
 void free_str_arr(str_arr *str_arr);
+
+/**
+ * Fills a #char* buffer with the user's home directory. Assumes memory
+ * is already allocated.
+ * @param buffer - the buffer to fill.
+ */
+void get_home_dir(char* buffer);
 
 #endif // QUASH_H
