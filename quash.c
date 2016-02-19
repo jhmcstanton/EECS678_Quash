@@ -104,10 +104,25 @@ bool handle_command(command_t* cmd){
     return true;
 }
 
+bool starts_with(char c, char* str){
+    if(str == NULL){
+	return false;
+    }
+    return str[0] == c;
+}
+
+bool root_is_home(char* path){
+    return starts_with('~', path);
+}
+
+bool is_env_var_req(char* maybe_var){
+    return starts_with('$', maybe_var);
+}
+
 void get_home_dir(char* buffer){    
     struct passwd *pw = getpwuid(getuid());
     buffer = strcpy(buffer, pw->pw_dir);
-    free(pw);
+//    free(pw);
 }
 
 str_arr mk_str_arr(command_t* cmd){
