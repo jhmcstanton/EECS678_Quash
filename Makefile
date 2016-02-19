@@ -5,8 +5,8 @@ CC = gcc --std=c99
 CFLAGS = -Wall -g -Og
 
 # Add files to their respective line to get this makefile to build them
-CFILES = quash.c
-HFILES = quash.h debug.h
+CFILES = quash.c includes/hashtable.c
+HFILES = quash.h debug.h includes/hashtable.h
 
 # Add libraries that need linked as needed (e.g. -lm)
 LIBS =
@@ -20,7 +20,7 @@ EXECNAME = $(patsubst %,./%,$(PROGNAME))
 all: doc $(PROGNAME)
 
 $(PROGNAME): $(OBJFILES)
-	$(CC) $(CFLAGS) $^ -o $(PROGNAME) $(LIBS)
+	$(CC) $(CFLAGS) $^ -o $(PROGNAME) $(LIBS) 
 
 %.o: %.c $(HFILES)
 	$(CC) $(CFLAGS) -c -o $@ $< $(LIBS)
