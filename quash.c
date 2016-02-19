@@ -82,23 +82,22 @@ bool handle_command(command_t* cmd){
 	    exit(EXIT_SUCCESS);
 	} else if(!strcmp(cursor, "cd")){
 	    if(command_list.length == 1){ // no path specified, returning to home directory
-		
-	    } else { // path is specified
+		chdir("~");
+	    } else { // path is specified		
 
 	    }
-	} else if(!strcmp(cursor, "echo")){
-	    if(command_list.length == 1){ // nothing to echo, just dumping a newline
-		printf("\n");
-	    } else {
-		
-	    }
+	} else if(!strcmp(cursor, "pwd")){
+	    char* temp_buffer = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
+	    printf("%s\n", temp_buffer);
+	    free(temp_buffer);
 	} else if(!strncmp(cursor, "set=", 4)){
 
 	} else {
 	    printf("Did not match any built in command\n");
 	}
     }
-    
+    free_str_arr(&command_list);    
     return true;
 }
 
