@@ -78,6 +78,7 @@ bool handle_command(command_t* cmd){
 
 	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
 	    printf("Exiting Quash\n");
+	    free_str_arr(&command_list);
 	    exit(EXIT_SUCCESS);
 	} else if(!strcmp(cursor, "cd")){
 	    if(command_list.length == 1){ // no path specified, returning to home directory
@@ -86,7 +87,11 @@ bool handle_command(command_t* cmd){
 
 	    }
 	} else if(!strcmp(cursor, "echo")){
-
+	    if(command_list.length == 1){ // nothing to echo, just dumping a newline
+		printf("\n");
+	    } else {
+		
+	    }
 	} else if(!strncmp(cursor, "set=", 4)){
 
 	} else {
@@ -105,7 +110,7 @@ str_arr mk_str_arr(command_t* cmd){
     commands.char_arr = (char**) malloc(NUM_COMMANDS * sizeof(char*));
     // allocate some space for the strings (fairly arbitrary)
     for(i = 0; i < NUM_COMMANDS; i++){
-	commands.char_arr[i] = (char*) malloc((MAX_COMMAND_LENGTH / 10) * sizeof(char));	
+	commands.char_arr[i] = (char*) malloc(MAX_ARR_STR_LENGTH * sizeof(char));	
     }
     // count the number of white spaces to get the word count
     // this will segfault if whitespace_count exceeds 20 or command_len exceeds MAX_COMMAND_LENGTH / 10
@@ -122,6 +127,14 @@ str_arr mk_str_arr(command_t* cmd){
     
     commands.length = whitespace_count;
     return commands;
+}
+
+void free_str_arr(str_arr *str_arr){
+    int i;
+    for(i = 0; i < NUM_COMMANDS; i++){
+	free(str_arr->char_arr[i]);
+    }
+    free(str_arr->char_arr);
 }
 
 /**

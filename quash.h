@@ -15,7 +15,7 @@
  * Specify the maximum number of characters accepted by the command string
  */
 #define MAX_COMMAND_LENGTH (1024)
-
+#define MAX_ARR_STR_LENGTH (1024 / 10)
 
 /**
  * Holds information about a command.
@@ -76,5 +76,11 @@ str_arr mk_str_arr(command_t* cmd);
  * @return True if successful, false otherwise
  */
 bool handle_command(command_t* cmd);
+
+/**
+ * Frees the internal char*s inside a #str_arr.
+ * @param str_arr - a #str_arr to free up. The struct itself is not freed.
+ */
+void free_str_arr(str_arr *str_arr);
 
 #endif // QUASH_H
