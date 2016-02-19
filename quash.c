@@ -23,26 +23,50 @@
 // compilation unit (this file and all files that include it). This is similar
 // to private in other languages.
 static bool running;
+static char terminal_prompt[MAX_COMMAND_LENGTH];
 
 
 /**************************************************************************
  * Private Functions 
  **************************************************************************/
+static void maintenance(){
+    /* This sets up the terminal prompt */
+    char* cwd = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    char* hostname = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    int i, j = 0;
+    // get and trim the current working directory
+    getcwd(cwd, MAX_COMMAND_LENGTH);
+    for(i = 0; i < MAX_COMMAND_LENGTH || cwd[i] != '\0'; i++){
+	if(cwd[i] == '/'){
+	    j = i + 1; 
+	}
+    }
+    shift_str_left(j, cwd);
+    
+    gethostname(hostname, MAX_COMMAND_LENGTH);
+    
+    sprintf(terminal_prompt, "[%s@%s %s]$ ", getlogin(), hostname, cwd);
+    free(cwd);
+    free(hostname);
+    
+}
 /**
  * Start the main loop by setting the running flag to true
  */
 static void start() {
   running = true;
+  maintenance();
 }
+
 
 /**************************************************************************
  * Public Functions 
  **************************************************************************/
-bool is_running() {
+bool is_running(){
   return running;
 }
 
-void terminate() {
+void terminate() {   
   running = false;
 }
 
@@ -193,7 +217,7 @@ int main(int argc, char** argv) {
   start();
   
   puts("Welcome to Quash!");
-  puts("Type \"exit\" to quit\n$");
+  printf("Type \"exit\" to quit\n%s", terminal_prompt);
 
   // Main execution loop
   while (is_running() && get_command(&cmd, stdin)) {
@@ -207,6 +231,8 @@ int main(int argc, char** argv) {
       puts(cmd.cmdstr); // Echo the input string
       */
       handle_command(&cmd);
+      maintenance();
+      printf("%s", terminal_prompt);
   }
 
   return EXIT_SUCCESS;
