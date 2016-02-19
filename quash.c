@@ -45,7 +45,7 @@ static void maintenance(){
     
     gethostname(hostname, MAX_COMMAND_LENGTH);
     
-    sprintf(terminal_prompt, "[%s@%s %s]$ ", getlogin(), hostname, cwd);
+    sprintf(terminal_prompt, "Quash![%s@%s %s]$ ", getlogin(), hostname, cwd);
     free(cwd);
     free(hostname);
     
