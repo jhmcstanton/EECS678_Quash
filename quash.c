@@ -73,19 +73,22 @@ bool handle_command(command_t* cmd){
     int i;
     char* cursor;
     // DEFINITELY not correct yet, just barebones
-    for(i = 0; i < command_list.length; i++){
-	cursor = command_list.char_arr[i];
-	if(!strcmp(cursor, "cd")){
+    if(command_list.length >= 1){
+	cursor = command_list.char_arr[0];
 
-	} else if(!strcmp(cursor, "pwd")){
-	    
-	} else if(!strcmp(cursor, "echo")){
-
-	} else if(!strcmp(cursor, "set=")){
-
-	} else if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
+	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
 	    printf("Exiting Quash\n");
 	    exit(EXIT_SUCCESS);
+	} else if(!strcmp(cursor, "cd")){
+	    if(command_list.length == 1){ // no path specified, returning to home directory
+		
+	    } else { // path is specified
+
+	    }
+	} else if(!strcmp(cursor, "echo")){
+
+	} else if(!strncmp(cursor, "set=", 4)){
+
 	} else {
 	    printf("Did not match any built in command\n");
 	}
