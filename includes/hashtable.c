@@ -17,7 +17,7 @@ static size_t hash(char* key){
     
     for(i = 0; key[i] != '\0'; i++){
 	hashed_index += key[i];
-    }
+    }    
     // this hash will not be correct if hashtable becomes dynamically sized
     // this would potentially miss many indexes
     return (hashed_index * 449) % HASHTABLE_START_SIZE;
@@ -25,7 +25,9 @@ static size_t hash(char* key){
 
 void insert_key(char* key, char* val, hashtable *table){
     size_t index = hash(key);
-    strcpy(table->values[index], val);
+    char *table_value = (char *) malloc(COPY_SIZE * sizeof(char));
+    strcpy(table_value, val);
+    table->values[index] = table_value;
 }
 
 char* lookup_key(char* key, hashtable *table){
@@ -40,4 +42,13 @@ hashtable new_table(){
     table.size = HASHTABLE_START_SIZE;
     table.used = 0;
     return table;
+}
+
+void free_table(hashtable *table){
+    int i;
+    for(i = 0; i < table->size; i++){
+	if(table->values[i] != NULL){
+	    free(table->values[i]);
+	}
+    }
 }

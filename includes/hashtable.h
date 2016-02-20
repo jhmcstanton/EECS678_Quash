@@ -52,4 +52,10 @@ char* lookup_key(char* val, hashtable *table);
  */
 hashtable new_table();
 
+/**
+ * Frees any allocated strings inside the #hashtable values field.
+ * @param table - the table whose values are to be freed up
+ */
+void free_table(hashtable *table);
+
 #endif
