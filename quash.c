@@ -24,6 +24,7 @@
 // to private in other languages.
 static bool running;
 static char terminal_prompt[MAX_COMMAND_LENGTH];
+static hashtable env_variables; 
 
 
 /**************************************************************************
@@ -36,7 +37,8 @@ static void maintenance(){
     int i, j = 0;
     // get and trim the current working directory
     getcwd(cwd, MAX_COMMAND_LENGTH);
-    for(i = 0; i < MAX_COMMAND_LENGTH || cwd[i] != '\0'; i++){
+
+    for(i = 0; i < MAX_COMMAND_LENGTH && cwd[i] != '\0'; i++){
 	if(cwd[i] == '/'){
 	    j = i + 1; 
 	}
@@ -55,6 +57,14 @@ static void maintenance(){
  */
 static void start() {
   running = true;
+  // setup the system variables
+  char* home_dir = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+  env_variables = new_table();
+  insert_key(PATH, DEFAULT_PATH, &env_variables);
+  insert_key(HOME, home_dir, &env_variables);
+  free(home_dir);
+  
+  // 
   maintenance();
 }
 
@@ -66,8 +76,10 @@ bool is_running(){
   return running;
 }
 
-void terminate() {   
-  running = false;
+void terminate() {
+    printf("Exiting Quash\n");
+//    free_table(&env_variables);
+    running = false;
 }
 
 /**************************************************************************
@@ -142,14 +154,14 @@ bool get_command(command_t* cmd, FILE* in) {
 bool handle_command(command_t* cmd){
     str_arr command_list = mk_str_arr(cmd);
     char* cursor;
-    // DEFINITELY not correct yet, just barebones
-    if(command_list.length >= 1){
+
+    if(command_list.length >= 1){ // DEFINITELY not correct yet, just barebones
 		cursor = command_list.char_arr[0];
 
 	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
-	    printf("Exiting Quash\n");
 	    free_str_arr(&command_list);
-	    exit(EXIT_SUCCESS);
+	    terminate();
+	    return true; 
 	} else if(!strcmp(cursor, "cd")){
 	    char* path = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
 	    if(command_list.length == 1){ // no path specified, returning to home directory
@@ -174,10 +186,71 @@ bool handle_command(command_t* cmd){
 	    printf("%s\n", temp_buffer);
 	    free(temp_buffer);
 	} else if(!strncmp(cursor, "set", 3)){
+	    // set takes the form of set VARNAME=VALUE
+	    // currently this does NOT handle values containing $VARNAME 
+	    if(command_list.length < 2){
+		printf("No value provided to set\n");
+	    } else {
+		char* variable_name = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+		char* variable_val  = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+		bool found_equals   = false;
+		int i, j = 0;
+
 		
+		cursor = command_list.char_arr[1];
+
+		for(i = 0; cursor[i] != '\0'; i++){
+		    if(found_equals){ // working on VALUE
+			printf("%s\n", variable_val);
+			if (cursor[i] == '$') {
+			    int temp = i; 
+			    char* env_var;
+			    env_var = get_env_var(&i, cursor, &env_variables);
+			    j += i - temp;
+			    sprintf(variable_val, "%s%s", variable_val, env_var);
+			    free(env_var);
+			} else {
+			    variable_val[j] = cursor[i];
+			}
+			j++;
+		    } else if (cursor[i] == '='){ // betwen VARNAME and VALUE
+			variable_name[i] = '\0';
+			found_equals = true;
+		    } else { // working on VALUE, may have to look up env values
+			variable_name[i] = cursor[i];
+		    }
+		}		
+		variable_val[j] = '\0';
+		insert_key(variable_name, variable_val, &env_variables);
+		printf("set : %s = %s \n", variable_name, variable_val);
+		free(variable_name);
+		free(variable_val );
+	    }
 	} else if(!strcmp(cursor, "jobs")){
 
 	} else if(!strcmp(cursor, "echo")){
+	    // ignores pipes and redirects right now
+	    int i, j;
+	    char* temp_buff; // = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+	    for(i = 1; i < command_list.length; i++){
+		if(i > 1){
+		    printf(" "); // putting a space between each "command"
+		}
+		cursor = command_list.char_arr[i];
+		for(j = 0; cursor[j] != '\0'; j++){ // this loop is required to find variables embedded in commands
+		    if(cursor[j] == '$'){ // found a variable
+			temp_buff = get_env_var(&j, cursor, &env_variables);
+			printf("%s", temp_buff);
+		    } else {
+			printf("%c", cursor[j]);
+		    }
+		}
+	       
+	    }
+            printf("\n");
+	    if(temp_buff != NULL){
+		free(temp_buff);
+	    }
 		
 	} else if(!strcmp(cursor, "set")){
 
@@ -196,6 +269,24 @@ void shift_str_left(int shamt, char* str){
     }
 }
 
+char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table){
+    char* name_to_lookup = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    char* var_buffer;
+    int i, j;
+    for(i = *start_index + 1, j = 0; buffer_with_var[i] != '\0' && buffer_with_var[i] != ' ' && buffer_with_var[i] != '$' ; i++, j++){
+        name_to_lookup[j] = buffer_with_var[i];
+    }
+    
+    name_to_lookup[i] = '\0';
+    var_buffer = lookup_key(name_to_lookup, table);
+    if(var_buffer == NULL){
+	var_buffer = "";
+    }
+    free(name_to_lookup);
+    return var_buffer;
+}
+
+
 bool starts_with(char c, char* str){
     if(str == NULL){
 	return false;
@@ -211,6 +302,9 @@ bool is_env_var_req(char* maybe_var){
     return starts_with('$', maybe_var);
 }
 
+/************************************************
+ PRETTY SURE THE MEM LEAK IS FROM THE PASSWD STRUCT HERE
+********************************************************************/
 void get_home_dir(char* buffer){    
     struct passwd *pw = getpwuid(getuid());
     buffer = strcpy(buffer, pw->pw_dir);
@@ -284,8 +378,10 @@ int main(int argc, char** argv) {
       puts(cmd.cmdstr); // Echo the input string
       */
       handle_command(&cmd);
+      if(is_running()){
+	  printf("%s", terminal_prompt);
+      }
       maintenance();
-      printf("%s", terminal_prompt);
   }
 
   return EXIT_SUCCESS;
