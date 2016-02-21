@@ -137,11 +137,10 @@ bool is_env_var_req(char* maybe_var);
 /**
  * Given a buffer that contains a variable at the provided index of the form $VARNAME this will
  * lookup the value of that variable in the provided hashtable. 
- * @param var_buffer - a buffer to store the lookedup value in - this will be "" if the variable name isn't in the table
- * @param start_index - the index at which the variable name begins 
+ * @param start_index - the index at which the variable name begins - updated in place
  * @param buffer_with_var - the buffer containing the variable
  * @param table - the hashtable to perform the lookup in
- * @returns the last index of the variable name
+ * @returns the value that was found or "" - this will be malloced!
  */
 char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table);
 #endif // QUASH_H
