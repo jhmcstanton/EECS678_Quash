@@ -164,28 +164,9 @@ bool handle_command(command_t* cmd){
 	    terminate();
 	    return true; 
 	} else if(!strcmp(cursor, "cd")){
-	    char* path = malloc_command();
-	    if(command_list.length == 1){ // no path specified, returning to home directory
-			get_home_dir(path);
-			chdir(path);
-	    } else if (root_is_home(command_list.char_arr[1])){ // path is specified and starts with ~
-				cursor = command_list.char_arr[1];
-		shift_str_left(1, cursor);
-		char* helper_str = malloc_command();
-		get_home_dir(helper_str);
-		sprintf(path, "%s%s", helper_str, cursor);
-		chdir(path);
-		free(helper_str);
-	    } else { // path is specified and absolute
-		strcpy(path, command_list.char_arr[1]);
-		chdir(path);
-	    }
-	    free(path);
+	    cd(command_list);
 	} else if(!strcmp(cursor, "pwd")){
-	    char* temp_buffer = malloc_command();
-	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
-	    printf("%s\n", temp_buffer);
-	    free(temp_buffer);
+	    pwd();
 	} else if(!strcmp(cursor, "set")){
 	    set(command_list);
 
@@ -202,6 +183,34 @@ bool handle_command(command_t* cmd){
     free_str_arr(&command_list);    
     return true;
 	
+}
+
+void cd(str_arr command_list){
+    char* path = malloc_command();
+    char* cursor; 
+    if(command_list.length == 1){ // no path specified, returning to home directory
+	get_home_dir(path);
+    } else if (root_is_home(command_list.char_arr[1])){ // path is specified and starts with ~
+	cursor = command_list.char_arr[1];
+	shift_str_left(1, cursor);
+	char* helper_str = malloc_command();
+	get_home_dir(helper_str);
+	sprintf(path, "%s%s", helper_str, cursor);
+	free(helper_str);
+    } else { // path is specified and absolute
+	strcpy(path, command_list.char_arr[1]);
+    }
+    if(chdir(path)){
+	printf("Directory does not exist\n");
+    }
+    free(path);
+}
+
+void pwd(){
+    char* temp_buffer = malloc_command();
+    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
+    printf("%s\n", temp_buffer);
+    free(temp_buffer);
 }
 
 void set(str_arr command_list){

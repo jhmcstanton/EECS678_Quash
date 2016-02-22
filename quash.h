@@ -180,4 +180,24 @@ void echo(str_arr command_list);
  * @param command_list - the parsed commands where the first field is equal to "set"
  */
 void set(str_arr command_list);
+
+/**
+ * Prints the current working directory.  
+ */
+void pwd();
+
+
+/**
+ * Changes to the desired directory. Can be in three forms:
+ *
+ * 1. cd  - changes to the root directory 
+ * 2. cd ~/path/here - changes to a path relative to the home directory
+ * 3. cd /absolute/path - changes to an absolute path
+ *
+ * @param command_list - a parsed list of commands that may have 1 or 2 commands, 
+ * and the first command is always cd
+ */
+void cd(str_arr command_list);
+
+
 #endif // QUASH_H
