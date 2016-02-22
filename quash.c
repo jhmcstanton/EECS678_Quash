@@ -281,7 +281,7 @@ char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table){
 	*var_buffer  = '\0';
     }
 
-    if(buffer_with_var[i] == '\0'){
+    if(buffer_with_var[i] == '\0' || buffer_with_var[i] == '$'){
 	*start_index = i - 1; // this ensures the calling for loops terminate
     } else {
 	*start_index = i;
