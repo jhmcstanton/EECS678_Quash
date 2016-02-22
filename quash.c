@@ -183,7 +183,7 @@ void cd(str_arr command_list){
     char* cursor; 
     if(command_list.length == 1){ // no path specified, returning to home directory
 	get_home_dir(path);
-    } else if (root_is_home(command_list.char_arr[1])){ // path is specified and starts with ~
+    } else if (command_list.char_arr[1][0] == '~'){ // path is specified and starts with ~
 	cursor = command_list.char_arr[1];
 	shift_str_left(1, cursor);
 	char* helper_str = malloc_command();
@@ -309,22 +309,6 @@ char* get_env_var(int *start_index, char* buffer_with_var){
 
     free(name_to_lookup);
     return var_buffer;
-}
-
-
-bool starts_with(char c, char* str){
-    if(str == NULL){
-	return false;
-    }
-    return str[0] == c;
-}
-
-bool root_is_home(char* path){
-    return starts_with('~', path);
-}
-
-bool is_env_var_req(char* maybe_var){
-    return starts_with('$', maybe_var);
 }
 
 /************************************************

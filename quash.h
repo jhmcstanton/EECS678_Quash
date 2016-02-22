@@ -110,29 +110,6 @@ void free_str_arr(str_arr *str_arr);
 void get_home_dir(char* buffer);
 
 /**
- * Helper function to check what a string's first character is, used by other functions.
- * @param c - the letter to be checked for at index 0 of str.
- * @param str - the string to check. May be NULL
- * @returns True if @param str's element 0 is c, otherwise return false.
- */
-bool starts_with(char c, char* str);
-
-/**
- * Helper function to check if the caller provided path starts with '~'
- * @param path - a file path that may or may not contain a '~' at index 0. May be NULL
- * @returns True if the path starts with '~', false otherwise.
- */
-bool root_is_home(char* path);
-
-/**
- * Helper function to check if a string is in the form of a system variable ($XXXXXXX).
- * Does NO lookup. 
- * @param maybe_var - the string to analyze. May be NULL.
- * @returns True if the first character of @param maybe_var is '$', false otherwise.
- */
-bool is_env_var_req(char* maybe_var);
-
-/**
  * Given a buffer that contains a variable at the provided index of the form $VARNAME this will
  * lookup the value of that variable in the provided hashtable. 
  * @param start_index - the index at which the variable name begins - updated in place
