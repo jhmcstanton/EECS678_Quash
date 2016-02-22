@@ -253,11 +253,21 @@ void set(str_arr command_list){
     }
 }
 
+void execute(str_arr command_list){
+
+}
+
 void echo(str_arr command_list){
-    int i, j;
+    int i;
     char* cursor;
+    char* buffer = malloc_command();
     
     for(i = 1; i < command_list.length; i++){
+	cursor = command_list.char_arr[i];
+	expand_buff_with_vars(buffer, cursor, &env_variables);
+	printf("%s ", buffer);
+	
+	/*
 	if(i > 1){
 	    printf(" "); // putting a space between each "command"
 	}
@@ -272,9 +282,10 @@ void echo(str_arr command_list){
 		printf("%c", cursor[j]);
 	    }
 	}
-	
+	*/
     }
     printf("\n");
+    free(buffer);
 };
 
 void shift_str_left(int shamt, char* str){
@@ -282,6 +293,20 @@ void shift_str_left(int shamt, char* str){
     for(i = 0; str[i + shamt - 1] != '\0'; i++){
 	str[i] = str[i + shamt];
     }
+}
+
+void expand_buff_with_vars(char* buffer, char* command, hashtable *table){
+    int i;
+    for(i = 0; command[i] != '\0'; i++){ // this loop is required to find variables embedded in commands
+	if(command[i] == '$'){ // found a variable
+	    char* temp_buff;
+	    temp_buff = get_env_var(&i, command, &env_variables);			
+	    sprintf(buffer, "%s%s", buffer, temp_buff);
+	    free(temp_buff);
+	} else {
+	    buffer[i] = command[i];
+	}
+    }    
 }
 
 char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table){
@@ -402,9 +427,9 @@ void free_path(path *path){
 
 char* malloc_command(){
     char* new_buffer = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
-    // this null character helps to avoid weird behavior with printf
-    // and string manipulation
-    new_buffer[0] = '\0';
+    // these null characters helps to avoid weird behavior with printf
+    // and string manipulatio    
+    memset(new_buffer, 0, MAX_COMMAND_LENGTH);
     return new_buffer;
 }
 

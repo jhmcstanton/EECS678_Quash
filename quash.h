@@ -200,5 +200,19 @@ void pwd();
  */
 void cd(str_arr command_list);
 
+/**
+ * 
+ */
+void execute(str_arr command_list);
+
+/**
+ * Fills a provided buffer with the fully expanded command provided after performing 
+ * variable lookups.
+ *
+ * @param buffer - the buffer to fill - expected to be allocated already
+ * @param command - the command to expand and perform lookups from
+ * @param table - the table to lookup variables from
+ */
+void expand_buff_with_vars(char* buffer, char* command, hashtable *table);
 
 #endif // QUASH_H
