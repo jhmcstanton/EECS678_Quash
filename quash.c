@@ -254,47 +254,32 @@ void execute(str_arr command_list){
     pid_t exec_proc; 
 
     char** args;
-    char* executable = command_list.char_arr[0];
     int i, j, status;
     bool run_in_bg = false;
-    if(command_list.length == 1){
-	exec_proc = fork();
-	if(exec_proc == 0){
-	    printf("attempting to run: %s\n", command_list.char_arr[0]);
-	    execlp(command_list.char_arr[0], command_list.char_arr[0]);
-	    exit(EXIT_SUCCESS);
-	} else {
-	    if(waitpid(exec_proc, &status, 0) == -1){
-		printf("Error in process: %d\n", exec_proc);
-	    }
-	}	
-    } else {
-	for(i = 1; i < command_list.length; i++){
-	    if(!strcmp(command_list.char_arr[i], "&")){ //
-		run_in_bg = true;
-		break;
-	    }	    
-	}
-	args = (char**) malloc(i * sizeof(char*));
-	for(j = 0; j < i; j++){
-	    args[j] = command_list.char_arr[j];
-	}
-	exec_proc = fork();
-
-	if(exec_proc == 0){
-	    printf("trying to run %s, args:\n", args[0]);
-	    for(j = 0; j < i; j++){
-		printf("%s\n", args[j]);
-	    }
-	    execvp(args[0], args);
-	    exit(EXIT_SUCCESS);	    
-	} else if(run_in_bg){
-	    if(waitpid(exec_proc, &status, 0) == -1){
-		printf("Error in process: %d\n", exec_proc);
-	    }	    
-	}
-	free(args);
+    
+    for(i = 1; i < command_list.length; i++){
+	if(!strcmp(command_list.char_arr[i], "&")){ 
+	    run_in_bg = true;
+	    break;
+	}	    
     }
+    args = (char**) malloc(i * sizeof(char*));
+    for(j = 0; j < i; j++){
+	args[j] = command_list.char_arr[j];
+    }
+    exec_proc = fork();
+    
+    if(exec_proc == 0){
+	args[j] = NULL;
+	
+	exit(execvp(args[0], args)); 
+    } else if(!run_in_bg){
+	if(waitpid(exec_proc, &status, 0) == -1){
+	    printf("Error in process: %d\n", exec_proc);
+	}	    
+    }
+    free(args);
+    
     free(full_exec_path);
 }
 
