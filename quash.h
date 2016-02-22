@@ -42,12 +42,6 @@ typedef struct str_arr {
 } str_arr;
 
 /**
- * Type synonym for a path abstraction - breaks the path variable into multiple strings
- * to be easily looped over
- */
-typedef str_arr path;
-
-/**
  * Query if quash should accept more input or not.
  *
  * @return True if Quash should accept more input and false otherwise
@@ -118,17 +112,6 @@ void get_home_dir(char* buffer);
  */
 char* get_env_var(int *start_index, char* buffer_with_var);
 
-/**
- * Takes a path variable and breaks it into substrings so it is easier to loop over
- * @param path_var - a path variable to break apart, no value is changed. Should look like path1:path2:pathN
- * @returns a pointer containing multiple strings
- */
-path mk_path(const char* path_var);
-
-/**
- * A helper function to free up the internals of the path abstraction
- */
-void free_path(path *path);
 
 /**
  *  Makes a pointer with enough space for a command string

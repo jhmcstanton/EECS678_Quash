@@ -353,7 +353,7 @@ void get_home_dir(char* buffer){
 
 str_arr mk_str_arr(command_t* cmd){
     str_arr commands;
-    bool last_space_was_whitespace = false; // so commands can be more than one ' ' apart
+    bool last_space_was_whitespace = false, found_quote = false; // so commands can be more than one ' ' apart or surrounded by "
     int i, whitespace_count = 0, command_len = 0;
 
     // allocate number of strings (only allows up to *NUM_COMMANDS* fields right now!)
@@ -365,13 +365,16 @@ str_arr mk_str_arr(command_t* cmd){
     // count the number of white spaces to get the word count
     // this will segfault if whitespace_count exceeds 20 or command_len exceeds MAX_COMMAND_LENGTH / 10
     for(i = 0; i < (cmd->cmdlen) + 1; i++){
-	if(cmd->cmdstr[i] == ' ' || cmd->cmdstr[i] == '\0'){ // found component of command or end
+	if((cmd->cmdstr[i] == ' ' && !found_quote) || cmd->cmdstr[i] == '\0'){ // found component of command or end
 	    if(!last_space_was_whitespace){
 		commands.char_arr[whitespace_count][command_len] = '\0';
 		command_len = 0;
 		whitespace_count++;
 	    }
 	    last_space_was_whitespace = true;
+	} else if(cmd->cmdstr[i] == '"'){
+	    last_space_was_whitespace = false;
+	    found_quote = !found_quote;
 	} else { // building component of command
 	    last_space_was_whitespace = false;
 	    commands.char_arr[whitespace_count][command_len] = cmd->cmdstr[i];
@@ -385,43 +388,10 @@ str_arr mk_str_arr(command_t* cmd){
 
 void free_str_arr(str_arr *str_arr){
     int i;
-    // was i < NUM_COMMANDS for some reason..
-    for(i = 0; i < str_arr->length; i++){
+    for(i = 0; i < NUM_COMMANDS; i++){
 	free(str_arr->char_arr[i]);
     }
     free(str_arr->char_arr);
-}
-
-path mk_path(const char* path_var){
-    int i, j, k;
-    str_arr new_path;
-    // not a great algorithm, but should be fine
-    // get the number of path bases based on the separator count (':')
-    for(i = 0, j = 0; path_var[i] != '\0'; i++){
-	if(path_var[i] == ':'){
-	    j++;
-	}
-    }
-    new_path.char_arr = (char**) malloc((j + 1) * sizeof(char*));
-    new_path.length = j + 1;
-
-    // now parse the string for the various paths
-    new_path.char_arr[0] = malloc_command();
-    for(i = 0, j = 0, k = 0; path_var[i] != '\0'; i++, k++){
-	if(path_var[i] == ':'){
-	    new_path.char_arr[j][k] = '\0';
-	    k = -1;
-	    j++;
-	    new_path.char_arr[j] = malloc_command();
-	} else {
-	    new_path.char_arr[j][k] = path_var[i];
-	}
-    }
-    return new_path;
-}
-
-void free_path(path *path){
-    free_str_arr(path);
 }
 
 char* malloc_command(){
