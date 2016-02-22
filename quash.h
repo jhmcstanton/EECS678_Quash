@@ -14,6 +14,7 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <hashtable.h>
+#include <ctype.h>
 
 
 /**

@@ -288,7 +288,7 @@ char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table){
     char* name_to_lookup = malloc_command();
     char* var_buffer;
     int i, j;
-    for(i = *start_index + 1, j = 0; buffer_with_var[i] != '\0' && buffer_with_var[i] != ' ' && buffer_with_var[i] != '$' ; i++, j++){
+    for(i = *start_index + 1, j = 0; isalpha(buffer_with_var[i]) || isdigit(buffer_with_var[i]); i++, j++){
         name_to_lookup[j] = buffer_with_var[i];
     }
     name_to_lookup[j] = '\0';
@@ -298,12 +298,7 @@ char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table){
 	*var_buffer  = '\0';
     }
 
-    if(buffer_with_var[i] == '\0' || buffer_with_var[i] == '$'){
-	*start_index = i - 1; // this ensures the calling for loops terminate
-    } else {
-	*start_index = i;
-    }
-    
+    *start_index = i - 1;     
 
     free(name_to_lookup);
     return var_buffer;
