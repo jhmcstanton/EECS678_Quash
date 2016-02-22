@@ -167,4 +167,17 @@ void free_path(path *path);
  * @returns a malloced command pointer
  */
 char* malloc_command();
+
+/**
+ * Performs the builtin command "echo" - handles sys environment variables as well
+ * @param command_list - the commands parsed by caller - the first field is expected to be
+ * the echo command.
+ */
+void echo(str_arr command_list);
+
+/**
+ * Assigns a new environment variable. Takes the form of set VARNAME=VARVAL
+ * @param command_list - the parsed commands where the first field is equal to "set"
+ */
+void set(str_arr command_list);
 #endif // QUASH_H

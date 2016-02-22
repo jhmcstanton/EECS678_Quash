@@ -186,71 +186,14 @@ bool handle_command(command_t* cmd){
 	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
 	    printf("%s\n", temp_buffer);
 	    free(temp_buffer);
-	} else if(!strncmp(cursor, "set", 3)){
-	    // set takes the form of set VARNAME=VALUE
-	    // currently this does NOT handle values containing $VARNAME 
-	    if(command_list.length < 2){
-		printf("No value provided to set\n");
-	    } else {
-		char* variable_name = malloc_command();
-		char* variable_val  = malloc_command();
-		bool found_equals   = false;
-		int i, j = 0;
+	} else if(!strcmp(cursor, "set")){
+	    set(command_list);
 
-		
-		cursor = command_list.char_arr[1];
-
-		for(i = 0; cursor[i] != '\0'; i++){
-		    if(found_equals){ // working on VALUE
-			if (cursor[i] == '$') {
-			    char* env_var;
-			    env_var = get_env_var(&i, cursor, &env_variables);
-			    sprintf(variable_val, "%s%s", variable_val, env_var);
-			    j = strlen(variable_val) - 1;
-			    free(env_var);
-			} else {
-			    variable_val[j] = cursor[i];
-			}
-			j++;
-		    } else if (cursor[i] == '='){ // betwen VARNAME and VALUE
-			variable_name[i] = '\0';
-			found_equals = true;
-		    } else { // working on VALUE, may have to look up env values
-			variable_name[i] = cursor[i];
-		    }
-		}
-		if(found_equals){
-		    variable_val[j] = '\0';
-		    insert_key(variable_name, variable_val, &env_variables);
-		}
-		free(variable_name);
-		free(variable_val );
-	    }
 	} else if(!strcmp(cursor, "jobs")){
 
 	} else if(!strcmp(cursor, "echo")){
-	    // ignores pipes and redirects right now
-	    int i, j;
-	    for(i = 1; i < command_list.length; i++){
-		if(i > 1){
-		    printf(" "); // putting a space between each "command"
-		}
-		cursor = command_list.char_arr[i];
-		for(j = 0; cursor[j] != '\0'; j++){ // this loop is required to find variables embedded in commands
-		    if(cursor[j] == '$'){ // found a variable
-			char* temp_buff = NULL;
-			temp_buff = get_env_var(&j, cursor, &env_variables);			
-			printf("%s", temp_buff);
-			free(temp_buff);
-		    } else {
-			printf("%c", cursor[j]);
-		    }
-		}
-	       
-	    }
-            printf("\n");
-		
-	} else if(!strcmp(cursor, "set")){
+	    echo(command_list);
+	    // ignores pipes and redirects right now		
 
 	} else {
 	    printf("Did not match any built in command\n");
@@ -260,6 +203,71 @@ bool handle_command(command_t* cmd){
     return true;
 	
 }
+
+void set(str_arr command_list){
+    // set takes the form of set VARNAME=VALUE
+    if(command_list.length < 2){
+	printf("No value provided to set\n");
+    } else {
+	char* cursor = command_list.char_arr[1];
+	char* variable_name = malloc_command();
+	char* variable_val  = malloc_command();
+	bool found_equals   = false;
+	int i, j = 0;
+	     
+	
+	for(i = 0; cursor[i] != '\0'; i++){
+	    if(found_equals){ // working on VALUE
+		if (cursor[i] == '$') {
+		    char* env_var;
+		    env_var = get_env_var(&i, cursor, &env_variables);
+		    sprintf(variable_val, "%s%s", variable_val, env_var);
+		    j = strlen(variable_val) - 1;
+		    free(env_var);
+		} else {
+		    variable_val[j] = cursor[i];
+		}
+		j++;
+	    } else if (cursor[i] == '='){ // betwen VARNAME and VALUE
+		variable_name[i] = '\0';
+		found_equals = true;
+	    } else { // working on VALUE, may have to look up env values
+		variable_name[i] = cursor[i];
+	    }
+	}
+	if(found_equals){
+	    variable_val[j] = '\0';
+	    insert_key(variable_name, variable_val, &env_variables);
+	}
+	free(variable_name);
+	free(variable_val );
+    }
+}
+
+void echo(str_arr command_list){
+    int i, j;
+    char* cursor;
+    
+    for(i = 1; i < command_list.length; i++){
+	if(i > 1){
+	    printf(" "); // putting a space between each "command"
+	}
+	cursor = command_list.char_arr[i];
+	for(j = 0; cursor[j] != '\0'; j++){ // this loop is required to find variables embedded in commands
+	    if(cursor[j] == '$'){ // found a variable
+		char* temp_buff = NULL;
+		temp_buff = get_env_var(&j, cursor, &env_variables);			
+		printf("%s", temp_buff);
+		free(temp_buff);
+	    } else {
+		printf("%c", cursor[j]);
+	    }
+	}
+	
+    }
+    printf("\n");
+};
+
 void shift_str_left(int shamt, char* str){
     int i;
     for(i = 0; str[i + shamt - 1] != '\0'; i++){
