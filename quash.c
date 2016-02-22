@@ -32,8 +32,8 @@ static hashtable env_variables;
  **************************************************************************/
 static void maintenance(){
     /* This sets up the terminal prompt */
-    char* cwd = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
-    char* hostname = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    char* cwd = malloc_command();
+    char* hostname = malloc_command();
     int i, j = 0;
     // get and trim the current working directory
     getcwd(cwd, MAX_COMMAND_LENGTH);
@@ -58,7 +58,8 @@ static void maintenance(){
 static void start() {
   running = true;
   // setup the system variables
-  char* home_dir = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+  char* home_dir = malloc_command();
+  get_home_dir(home_dir);
   env_variables = new_table();
   insert_key(PATH, DEFAULT_PATH, &env_variables);
   insert_key(HOME, home_dir, &env_variables);
@@ -163,14 +164,14 @@ bool handle_command(command_t* cmd){
 	    terminate();
 	    return true; 
 	} else if(!strcmp(cursor, "cd")){
-	    char* path = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+	    char* path = malloc_command();
 	    if(command_list.length == 1){ // no path specified, returning to home directory
 			get_home_dir(path);
 			chdir(path);
 	    } else if (root_is_home(command_list.char_arr[1])){ // path is specified and starts with ~
 				cursor = command_list.char_arr[1];
 		shift_str_left(1, cursor);
-		char* helper_str = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+		char* helper_str = malloc_command();
 		get_home_dir(helper_str);
 		sprintf(path, "%s%s", helper_str, cursor);
 		chdir(path);
@@ -181,7 +182,7 @@ bool handle_command(command_t* cmd){
 	    }
 	    free(path);
 	} else if(!strcmp(cursor, "pwd")){
-	    char* temp_buffer = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+	    char* temp_buffer = malloc_command();
 	    getcwd(temp_buffer, MAX_COMMAND_LENGTH);
 	    printf("%s\n", temp_buffer);
 	    free(temp_buffer);
@@ -191,8 +192,8 @@ bool handle_command(command_t* cmd){
 	    if(command_list.length < 2){
 		printf("No value provided to set\n");
 	    } else {
-		char* variable_name = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
-		char* variable_val  = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+		char* variable_name = malloc_command();
+		char* variable_val  = malloc_command();
 		bool found_equals   = false;
 		int i, j = 0;
 
@@ -201,13 +202,11 @@ bool handle_command(command_t* cmd){
 
 		for(i = 0; cursor[i] != '\0'; i++){
 		    if(found_equals){ // working on VALUE
-			printf("%s\n", variable_val);
 			if (cursor[i] == '$') {
-			    int temp = i; 
 			    char* env_var;
 			    env_var = get_env_var(&i, cursor, &env_variables);
-			    j += i - temp;
 			    sprintf(variable_val, "%s%s", variable_val, env_var);
+			    j = strlen(variable_val) - 1;
 			    free(env_var);
 			} else {
 			    variable_val[j] = cursor[i];
@@ -219,10 +218,11 @@ bool handle_command(command_t* cmd){
 		    } else { // working on VALUE, may have to look up env values
 			variable_name[i] = cursor[i];
 		    }
-		}		
-		variable_val[j] = '\0';
-		insert_key(variable_name, variable_val, &env_variables);
-		printf("set : %s = %s \n", variable_name, variable_val);
+		}
+		if(found_equals){
+		    variable_val[j] = '\0';
+		    insert_key(variable_name, variable_val, &env_variables);
+		}
 		free(variable_name);
 		free(variable_val );
 	    }
@@ -231,7 +231,6 @@ bool handle_command(command_t* cmd){
 	} else if(!strcmp(cursor, "echo")){
 	    // ignores pipes and redirects right now
 	    int i, j;
-	    char* temp_buff; // = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
 	    for(i = 1; i < command_list.length; i++){
 		if(i > 1){
 		    printf(" "); // putting a space between each "command"
@@ -239,8 +238,10 @@ bool handle_command(command_t* cmd){
 		cursor = command_list.char_arr[i];
 		for(j = 0; cursor[j] != '\0'; j++){ // this loop is required to find variables embedded in commands
 		    if(cursor[j] == '$'){ // found a variable
-			temp_buff = get_env_var(&j, cursor, &env_variables);
+			char* temp_buff = NULL;
+			temp_buff = get_env_var(&j, cursor, &env_variables);			
 			printf("%s", temp_buff);
+			free(temp_buff);
 		    } else {
 			printf("%c", cursor[j]);
 		    }
@@ -248,9 +249,6 @@ bool handle_command(command_t* cmd){
 	       
 	    }
             printf("\n");
-	    if(temp_buff != NULL){
-		free(temp_buff);
-	    }
 		
 	} else if(!strcmp(cursor, "set")){
 
@@ -270,18 +268,26 @@ void shift_str_left(int shamt, char* str){
 }
 
 char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table){
-    char* name_to_lookup = (char *) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    char* name_to_lookup = malloc_command();
     char* var_buffer;
     int i, j;
     for(i = *start_index + 1, j = 0; buffer_with_var[i] != '\0' && buffer_with_var[i] != ' ' && buffer_with_var[i] != '$' ; i++, j++){
         name_to_lookup[j] = buffer_with_var[i];
     }
-    
-    name_to_lookup[i] = '\0';
+    name_to_lookup[j] = '\0';
     var_buffer = lookup_key(name_to_lookup, table);
     if(var_buffer == NULL){
-	var_buffer = "";
+	var_buffer = (char *) malloc(sizeof(char));
+	*var_buffer  = '\0';
     }
+
+    if(buffer_with_var[i] == '\0'){
+	*start_index = i - 1; // this ensures the calling for loops terminate
+    } else {
+	*start_index = i;
+    }
+    
+
     free(name_to_lookup);
     return var_buffer;
 }
@@ -349,6 +355,45 @@ void free_str_arr(str_arr *str_arr){
 	free(str_arr->char_arr[i]);
     }
     free(str_arr->char_arr);
+}
+
+path mk_path(const char* path_var){
+    int i, j, k;
+    str_arr new_path;
+    // not a great algorithm, but should be fine
+    // get the number of path bases based on the separator count (':')
+    for(i = 0, j = 0; path_var[i] != '\0'; i++){
+	if(path_var[i] == ':'){
+	    j++;
+	}
+    }
+    new_path.char_arr = (char**) malloc(j * sizeof(char*));
+    new_path.length = j;
+
+    // now parse the string for the various paths
+    new_path.char_arr[0] = malloc_command();
+    for(i = 0, j = 0, k = 0; path_var[i] != '\0'; i++, k++){
+	if(path_var[i] == ':'){
+	    k = 0;
+	    j++;
+	    new_path.char_arr[j] = malloc_command();
+	} else {
+	    new_path.char_arr[j][k] = path_var[i];
+	}
+    }
+    return new_path;
+}
+
+void free_path(path *path){
+    free_str_arr(path);
+}
+
+char* malloc_command(){
+    char* new_buffer = (char*) malloc(MAX_COMMAND_LENGTH * sizeof(char));
+    // this null character helps to avoid weird behavior with printf
+    // and string manipulation
+    new_buffer[0] = '\0';
+    return new_buffer;
 }
 
 /**

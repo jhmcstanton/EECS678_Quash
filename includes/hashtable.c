@@ -32,15 +32,24 @@ void insert_key(char* key, char* val, hashtable *table){
 
 char* lookup_key(char* key, hashtable *table){
     size_t index = hash(key);
-    char* copied_val = (char *) malloc(COPY_SIZE * sizeof(char));
-    strcpy(copied_val, table->values[index]);
-    return copied_val;
+    char* table_val = table->values[index];
+    if(table_val != NULL){
+	char* copied_val = (char *) malloc(COPY_SIZE * sizeof(char));	
+	strcpy(copied_val, table_val);
+	return copied_val;    
+    } else {
+	return NULL;
+    }
 }
 
 hashtable new_table(){
     hashtable table;
     table.size = HASHTABLE_START_SIZE;
     table.used = 0;
+    int i;
+    for(i = 0; i < table.used; i++){
+	table.values[i] = NULL;
+    }
     return table;
 }
 
