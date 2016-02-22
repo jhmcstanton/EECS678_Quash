@@ -267,22 +267,6 @@ void echo(str_arr command_list){
 	expand_buff_with_vars(buffer, cursor, &env_variables);
 	printf("%s ", buffer);
 	
-	/*
-	if(i > 1){
-	    printf(" "); // putting a space between each "command"
-	}
-	cursor = command_list.char_arr[i];
-	for(j = 0; cursor[j] != '\0'; j++){ // this loop is required to find variables embedded in commands
-	    if(cursor[j] == '$'){ // found a variable
-		char* temp_buff = NULL;
-		temp_buff = get_env_var(&j, cursor, &env_variables);			
-		printf("%s", temp_buff);
-		free(temp_buff);
-	    } else {
-		printf("%c", cursor[j]);
-	    }
-	}
-	*/
     }
     printf("\n");
     free(buffer);
