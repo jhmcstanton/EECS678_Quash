@@ -73,7 +73,6 @@ bool is_running(){
 
 void terminate() {
     printf("Exiting Quash\n");
-//    free_table(&env_variables);
     running = false;
 }
 
@@ -241,6 +240,8 @@ void set(str_arr command_list){
 	if(found_equals){
 	    variable_val[j] = '\0';
 	    setenv(variable_name, variable_val, 1);
+	} else {
+	    unsetenv(variable_name);  
 	}
 	free(variable_name);
 	free(variable_val );
