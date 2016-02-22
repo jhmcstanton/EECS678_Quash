@@ -24,7 +24,6 @@
 // to private in other languages.
 static bool running;
 static char terminal_prompt[MAX_COMMAND_LENGTH];
-static hashtable env_variables; 
 
 
 /**************************************************************************
@@ -32,6 +31,8 @@ static hashtable env_variables;
  **************************************************************************/
 static void maintenance(){
     /* This sets up the terminal prompt */
+    
+    
     char* cwd = malloc_command();
     char* hostname = malloc_command();
     int i, j = 0;
@@ -57,15 +58,8 @@ static void maintenance(){
  */
 static void start() {
   running = true;
-  // setup the system variables
-  char* home_dir = malloc_command();
-  get_home_dir(home_dir);
-  env_variables = new_table();
-  insert_key(PATH, DEFAULT_PATH, &env_variables);
-  insert_key(HOME, home_dir, &env_variables);
-  free(home_dir);
+  // setup the system variables  
   
-  // 
   maintenance();
 }
 
@@ -229,7 +223,7 @@ void set(str_arr command_list){
 	    if(found_equals){ // working on VALUE
 		if (cursor[i] == '$') {
 		    char* env_var;
-		    env_var = get_env_var(&i, cursor, &env_variables);
+		    env_var = get_env_var(&i, cursor);
 		    sprintf(variable_val, "%s%s", variable_val, env_var);
 		    j = strlen(variable_val) - 1;
 		    free(env_var);
@@ -246,7 +240,7 @@ void set(str_arr command_list){
 	}
 	if(found_equals){
 	    variable_val[j] = '\0';
-	    insert_key(variable_name, variable_val, &env_variables);
+	    setenv(variable_name, variable_val, 1);
 	}
 	free(variable_name);
 	free(variable_val );
@@ -264,7 +258,7 @@ void echo(str_arr command_list){
     
     for(i = 1; i < command_list.length; i++){
 	cursor = command_list.char_arr[i];
-	expand_buff_with_vars(buffer, cursor, &env_variables);
+	expand_buff_with_vars(buffer, cursor);
 	printf("%s ", buffer);
 	
     }
@@ -279,32 +273,35 @@ void shift_str_left(int shamt, char* str){
     }
 }
 
-void expand_buff_with_vars(char* buffer, char* command, hashtable *table){
+void expand_buff_with_vars(char* buffer, char* command){
     int i;
     for(i = 0; command[i] != '\0'; i++){ // this loop is required to find variables embedded in commands
 	if(command[i] == '$'){ // found a variable
 	    char* temp_buff;
-	    temp_buff = get_env_var(&i, command, &env_variables);			
+	    temp_buff = get_env_var(&i, command);			
 	    sprintf(buffer, "%s%s", buffer, temp_buff);
 	    free(temp_buff);
 	} else {
 	    buffer[i] = command[i];
 	}
-    }    
+    };
 }
 
-char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table){
+char* get_env_var(int *start_index, char* buffer_with_var){
     char* name_to_lookup = malloc_command();
-    char* var_buffer;
+    char* var_buffer, *found_val;
     int i, j;
     for(i = *start_index + 1, j = 0; isalpha(buffer_with_var[i]) || isdigit(buffer_with_var[i]); i++, j++){
         name_to_lookup[j] = buffer_with_var[i];
     }
     name_to_lookup[j] = '\0';
-    var_buffer = lookup_key(name_to_lookup, table);
-    if(var_buffer == NULL){
+    found_val = getenv(name_to_lookup); 
+    if(found_val == NULL){
 	var_buffer = (char *) malloc(sizeof(char));
 	*var_buffer  = '\0';
+    } else {
+	var_buffer = malloc_command();
+	strcpy(var_buffer, found_val);
     }
 
     *start_index = i - 1;     

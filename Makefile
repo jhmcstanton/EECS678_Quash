@@ -7,10 +7,10 @@ CC = gcc --std=c99
 CFLAGS = -Wall -g -Og -I$(IDIR)
 
 # Add files to their respective line to get this makefile to build them
-CFILES = quash.c $(IDIR)/hashtable.c
+CFILES = quash.c 
 HFILES = quash.h debug.h 
 
-_DEPS = hashtable.h
+_DEPS = 
 DEPS  = $(patsubst %, $(IDIR)/%, $(_DEPS))
 
 # Add libraries that need linked as needed (e.g. -lm)

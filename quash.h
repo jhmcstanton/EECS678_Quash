@@ -13,16 +13,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <sys/types.h>
-#include <hashtable.h>
 #include <ctype.h>
-
-
-/**
- *  Default system environment variables
- */
-#define PATH "PATH"
-#define DEFAULT_PATH "/usr/lib64/qt-3.3/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/usr/lib64/openmpi/bin/:/opt/smlnj/bin/"
-#define HOME "HOME"
 
 /**
  * Specify the maximum number of characters accepted by the command string
@@ -146,10 +137,9 @@ bool is_env_var_req(char* maybe_var);
  * lookup the value of that variable in the provided hashtable. 
  * @param start_index - the index at which the variable name begins - updated in place
  * @param buffer_with_var - the buffer containing the variable
- * @param table - the hashtable to perform the lookup in
  * @returns the value that was found or "" - this will be malloced!
  */
-char* get_env_var(int *start_index, char* buffer_with_var, hashtable *table);
+char* get_env_var(int *start_index, char* buffer_with_var);
 
 /**
  * Takes a path variable and breaks it into substrings so it is easier to loop over
@@ -211,8 +201,7 @@ void execute(str_arr command_list);
  *
  * @param buffer - the buffer to fill - expected to be allocated already
  * @param command - the command to expand and perform lookups from
- * @param table - the table to lookup variables from
  */
-void expand_buff_with_vars(char* buffer, char* command, hashtable *table);
+void expand_buff_with_vars(char* buffer, char* command);
 
 #endif // QUASH_H
