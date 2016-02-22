@@ -170,7 +170,8 @@ bool handle_command(command_t* cmd){
 	    // ignores pipes and redirects right now		
 
 	} else {
-	    printf("Did not match any built in command\n");
+	    execute(command_list);
+//	    printf("Did not match any built in command\n");
 	}
     }
     free_str_arr(&command_list);    
@@ -249,7 +250,52 @@ void set(str_arr command_list){
 }
 
 void execute(str_arr command_list){
+    char* full_exec_path = malloc_command();
+    pid_t exec_proc; 
 
+    char** args;
+    char* executable = command_list.char_arr[0];
+    int i, j, status;
+    bool run_in_bg = false;
+    if(command_list.length == 1){
+	exec_proc = fork();
+	if(exec_proc == 0){
+	    printf("attempting to run: %s\n", command_list.char_arr[0]);
+	    execlp(command_list.char_arr[0], command_list.char_arr[0]);
+	    exit(EXIT_SUCCESS);
+	} else {
+	    if(waitpid(exec_proc, &status, 0) == -1){
+		printf("Error in process: %d\n", exec_proc);
+	    }
+	}	
+    } else {
+	for(i = 1; i < command_list.length; i++){
+	    if(!strcmp(command_list.char_arr[i], "&")){ //
+		run_in_bg = true;
+		break;
+	    }	    
+	}
+	args = (char**) malloc(i * sizeof(char*));
+	for(j = 0; j < i; j++){
+	    args[j] = command_list.char_arr[j];
+	}
+	exec_proc = fork();
+
+	if(exec_proc == 0){
+	    printf("trying to run %s, args:\n", args[0]);
+	    for(j = 0; j < i; j++){
+		printf("%s\n", args[j]);
+	    }
+	    execvp(args[0], args);
+	    exit(EXIT_SUCCESS);	    
+	} else if(run_in_bg){
+	    if(waitpid(exec_proc, &status, 0) == -1){
+		printf("Error in process: %d\n", exec_proc);
+	    }	    
+	}
+	free(args);
+    }
+    free(full_exec_path);
 }
 
 void echo(str_arr command_list){
@@ -354,7 +400,8 @@ str_arr mk_str_arr(command_t* cmd){
 
 void free_str_arr(str_arr *str_arr){
     int i;
-    for(i = 0; i < NUM_COMMANDS; i++){
+    // was i < NUM_COMMANDS for some reason..
+    for(i = 0; i < str_arr->length; i++){
 	free(str_arr->char_arr[i]);
     }
     free(str_arr->char_arr);
@@ -370,14 +417,15 @@ path mk_path(const char* path_var){
 	    j++;
 	}
     }
-    new_path.char_arr = (char**) malloc(j * sizeof(char*));
-    new_path.length = j;
+    new_path.char_arr = (char**) malloc((j + 1) * sizeof(char*));
+    new_path.length = j + 1;
 
     // now parse the string for the various paths
     new_path.char_arr[0] = malloc_command();
     for(i = 0, j = 0, k = 0; path_var[i] != '\0'; i++, k++){
 	if(path_var[i] == ':'){
-	    k = 0;
+	    new_path.char_arr[j][k] = '\0';
+	    k = -1;
 	    j++;
 	    new_path.char_arr[j] = malloc_command();
 	} else {
