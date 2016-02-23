@@ -73,7 +73,6 @@ bool is_running(){
 }
 
 void terminate() {
-    printf("Exiting Quash\n");
     running = false;
 }
 
@@ -274,9 +273,9 @@ int execute(str_arr command_list){
     if(exec_proc == 0){
 	args[j] = NULL;
 
-	terminate();
-	free_str_arr(&command_list);
 	status = execvp(args[0], args);
+	free_str_arr(&command_list);
+	terminate();
 	free(args);
 	exit(status);
     } else if(!run_in_bg){
@@ -424,21 +423,14 @@ int main(int argc, char** argv) {
 
   // Main execution loop
   while (is_running() && get_command(&cmd, stdin)) {
-    // NOTE: I would not recommend keeping anything inside the body of
-    // this while loop. It is just an example.
-
-    // The commands should be parsed, then executed.
-      /*   if (!strcmp(cmd.cmdstr, "exit"))
-      terminate(); // Exit Quash
-    else 
-      puts(cmd.cmdstr); // Echo the input string
-      */
       handle_command(&cmd);
       if(is_running()){
 	  printf("%s", terminal_prompt);
       }
       maintenance();
   }
+
+  printf("Exiting Quash\n");
 
   return EXIT_SUCCESS;
 }
