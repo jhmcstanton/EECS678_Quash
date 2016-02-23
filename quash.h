@@ -172,4 +172,12 @@ int execute(str_arr command_list);
  */
 void expand_buff_with_vars(char* buffer, char* command);
 
+/**
+ * Checks if a string is an IO redirect string
+ *
+ * @param str - the string to compare
+ * @returns True if str equals >, >>, <, << or |, false otherwise
+ */
+bool is_redirect(char* str);
+
 #endif // QUASH_H

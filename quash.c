@@ -24,6 +24,8 @@
 // to private in other languages.
 static bool running;
 static char terminal_prompt[MAX_COMMAND_LENGTH];
+static int redirect_ct = 5;
+static char *redirects[5] = { ">", ">>", "<", "<<", "|"};
 
 
 /**************************************************************************
@@ -248,6 +250,16 @@ void set(str_arr command_list){
 	free(variable_name);
 	free(variable_val );
     }
+}
+
+bool is_redirect(char* str){
+    int i;
+    for(i = 0; i < redirect_ct; i++){
+	if(!strcmp(str, redirects[i])){
+	    return true;
+	}
+    }
+    return false;
 }
 
 int execute(str_arr command_list){
