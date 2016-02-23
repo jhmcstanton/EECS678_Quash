@@ -278,7 +278,8 @@ int execute(str_arr command_list){
     }
     args = (char**) malloc(i * sizeof(char*));
     for(j = 0; j < i; j++){
-	args[j] = command_list.char_arr[j];
+	args[j]  = malloc_command();
+	expand_buff_with_vars(args[j], command_list.char_arr[j]);
     }
     exec_proc = fork();
     
@@ -294,12 +295,20 @@ int execute(str_arr command_list){
 	status = execvp(args[0], args);
 	free_str_arr(&command_list);
 	terminate();
+	// free all args
+	for(j = 0; j < i; j++){
+	    free(args[j]);
+	}
 	free(args);
 	exit(status);
     } else if(!run_in_bg){
 	if(waitpid(exec_proc, &status, 0) == -1){
 	    printf("Error in process: %d\n", exec_proc);
 	}	    
+    }
+    // free all args
+    for(j = 0; j < i; j++){
+	free(args[j]);
     }
     free(args);
     
