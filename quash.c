@@ -273,6 +273,12 @@ int execute(str_arr command_list){
     if(exec_proc == 0){
 	args[j] = NULL;
 
+	if(run_in_bg){
+	    int hole = open("/dev/null", O_WRONLY);
+	    dup2(hole, STDOUT_FILENO);
+	    dup2(hole, STDERR_FILENO);
+	    close(hole);
+	}
 	status = execvp(args[0], args);
 	free_str_arr(&command_list);
 	terminate();

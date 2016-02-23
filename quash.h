@@ -13,7 +13,10 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <errno.h>
 #include <ctype.h>
+#include <fcntl.h> 
 
 /**
  * Specify the maximum number of characters accepted by the command string
