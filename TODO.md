@@ -2,9 +2,10 @@
 
 All of these are pulled from the rubric.
 
-1. Executables
+1. ~~Executables~~
   1. Without args
   1. With args
+  1. Allows background processes
 1. ~~*exit* and *quit* commands~~
 1. ~~Work location management~~
   1. ~~cd (with and without args) (chdir function? Could it be that easy?)~~
@@ -24,7 +25,7 @@ All of these are pulled from the rubric.
   Environmental variables are passed to child processes. I assume that this is only
   the initial state of the process environmental variables and that parent and child
   can diverge.
-1. Background / Foreground execution
+1. ~~Background / Foreground execution~~
 1. Pipes
 1. Project Report
 
