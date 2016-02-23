@@ -151,9 +151,14 @@ void pwd();
 void cd(str_arr command_list);
 
 /**
- * 
+ * Executes a binary and provides forwards the provided arguments to
+ * it. Searches the path for the executable.
+ *
+ * @param command_list - a parsed commandstr with the first element
+ * the binary and any additional ones are passed as arguments
+ * @returns the integer return status of the executable
  */
-void execute(str_arr command_list);
+int execute(str_arr command_list);
 
 /**
  * Fills a provided buffer with the fully expanded command provided after performing 

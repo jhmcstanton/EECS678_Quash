@@ -30,10 +30,8 @@ static char terminal_prompt[MAX_COMMAND_LENGTH];
  * Private Functions 
  **************************************************************************/
 static void maintenance(){
-    /* This sets up the terminal prompt */
-    
-    
-    char* cwd = malloc_command();
+    /* This sets up the terminal prompt */    
+    char* cwd      = malloc_command();
     char* hostname = malloc_command();
     int i, j = 0;
     // get and trim the current working directory
@@ -48,10 +46,13 @@ static void maintenance(){
     
     gethostname(hostname, MAX_COMMAND_LENGTH);
     
+
+    // getlogin() causes a "reachable" memory leak according to
+    // valgrind, which is apparently ok: http://valgrind.org/docs/manual/faq.html#faq.deflost
+    // memory lost - 1,718 Bytes in 5 blocks
     sprintf(terminal_prompt, "Quash![%s@%s %s]$ ", getlogin(), hostname, cwd);
     free(cwd);
     free(hostname);
-    
 }
 /**
  * Start the main loop by setting the running flag to true
@@ -150,7 +151,7 @@ bool handle_command(command_t* cmd){
     char* cursor;
 
     if(command_list.length >= 1){ // DEFINITELY not correct yet, just barebones
-		cursor = command_list.char_arr[0];
+	cursor = command_list.char_arr[0];
 
 	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
 	    free_str_arr(&command_list);
@@ -167,11 +168,12 @@ bool handle_command(command_t* cmd){
 
 	} else if(!strcmp(cursor, "echo")){
 	    echo(command_list);
-	    // ignores pipes and redirects right now		
+	    // ignores pipes and redirects right now 
 
 	} else {
-	    execute(command_list);
-//	    printf("Did not match any built in command\n");
+	    if(execute(command_list)){
+		printf("Unable to find %s\n", command_list.char_arr[0]);
+	    }
 	}
     }
     free_str_arr(&command_list);    
@@ -249,7 +251,7 @@ void set(str_arr command_list){
     }
 }
 
-void execute(str_arr command_list){
+int execute(str_arr command_list){
     char* full_exec_path = malloc_command();
     pid_t exec_proc; 
 
@@ -271,8 +273,12 @@ void execute(str_arr command_list){
     
     if(exec_proc == 0){
 	args[j] = NULL;
-	
-	exit(execvp(args[0], args)); 
+
+	terminate();
+	free_str_arr(&command_list);
+	status = execvp(args[0], args);
+	free(args);
+	exit(status);
     } else if(!run_in_bg){
 	if(waitpid(exec_proc, &status, 0) == -1){
 	    printf("Error in process: %d\n", exec_proc);
@@ -281,6 +287,7 @@ void execute(str_arr command_list){
     free(args);
     
     free(full_exec_path);
+    return status;
 }
 
 void echo(str_arr command_list){
@@ -346,9 +353,7 @@ char* get_env_var(int *start_index, char* buffer_with_var){
  PRETTY SURE THE MEM LEAK IS FROM THE PASSWD STRUCT HERE
 ********************************************************************/
 void get_home_dir(char* buffer){    
-    struct passwd *pw = getpwuid(getuid());
-    buffer = strcpy(buffer, pw->pw_dir);
-//    free(pw);
+    buffer = strcpy(buffer, getenv("HOME"));
 }
 
 str_arr mk_str_arr(command_t* cmd){
