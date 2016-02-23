@@ -151,7 +151,7 @@ bool handle_command(command_t* cmd){
     str_arr command_list = mk_str_arr(cmd);
     char* cursor;
 
-    if(command_list.length >= 1){ // DEFINITELY not correct yet, just barebones
+    if(command_list.length >= 1 && strlen(command_list.char_arr[0])){ 
 	cursor = command_list.char_arr[0];
 
 	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
