@@ -25,7 +25,7 @@
 static bool running;
 static char terminal_prompt[MAX_COMMAND_LENGTH];
 static int redirect_ct = 5;
-static char *redirects[5] = { ">", ">>", "<", "<<", "|"};
+static char *redirects[5] = { "|", ">", "<", ">>", "<<" };
 
 
 /**************************************************************************
@@ -252,14 +252,16 @@ void set(str_arr command_list){
     }
 }
 
-bool is_redirect(char* str){
+redirect which_redirect(char* str){
     int i;
+    // ! This is assuming that redirects is in the same order as the enum
+    // redirects is defined!
     for(i = 0; i < redirect_ct; i++){
-	if(!strcmp(str, redirects[i])){
-	    return true;
+	if(!strncmp(str, redirects[i], strlen(redirects[i]))){
+	    return i + 1;
 	}
     }
-    return false;
+    return 0;
 }
 
 int execute(str_arr command_list){
@@ -385,17 +387,19 @@ void get_home_dir(char* buffer){
 str_arr mk_str_arr(command_t* cmd){
     str_arr commands;
     bool last_space_was_whitespace = false, found_quote = false; // so commands can be more than one ' ' apart or surrounded by "
-    int i, whitespace_count = 0, command_len = 0;
+    int i, whitespace_count = 0, command_len = 0, redirect_index = 0;
+    redirect found_redirect;
 
     // allocate number of strings (only allows up to *NUM_COMMANDS* fields right now!)
-    commands.char_arr = (char**) malloc(NUM_COMMANDS * sizeof(char*));
+    commands.char_arr  = (char**) malloc(NUM_COMMANDS * sizeof(char*));
+    commands.redirects = (ri_pair*) malloc(NUM_COMMANDS * sizeof(ri_pair));
     // allocate some space for the strings (fairly arbitrary)
     for(i = 0; i < NUM_COMMANDS; i++){
 	commands.char_arr[i] = (char*) malloc(MAX_ARR_STR_LENGTH * sizeof(char));	
     }
     // count the number of white spaces to get the word count
     // this will segfault if whitespace_count exceeds 20 or command_len exceeds MAX_COMMAND_LENGTH / 10
-    for(i = 0; i < (cmd->cmdlen) + 1; i++){
+    for(i = 0; i < cmd->cmdlen + 1; i++){
 	if((cmd->cmdstr[i] == ' ' && !found_quote) || cmd->cmdstr[i] == '\0'){ // found component of command or end
 	    if(!last_space_was_whitespace){
 		commands.char_arr[whitespace_count][command_len] = '\0';
@@ -406,6 +410,16 @@ str_arr mk_str_arr(command_t* cmd){
 	} else if(cmd->cmdstr[i] == '"'){
 	    last_space_was_whitespace = false;
 	    found_quote = !found_quote;
+	} else if(found_redirect = which_redirect(&cmd->cmdstr[i])){
+	    commands.redirects[redirect_index].redirect = found_redirect;
+	    commands.redirects[redirect_index++].r_index = whitespace_count; 
+	    if(!last_space_was_whitespace){ // form is foo bar< ..
+		// wrap up last command
+		commands.char_arr[whitespace_count++][command_len++] = '\0';		
+	    } 
+	    if(found_redirect == AWRITE_R || found_redirect == AWRITE_L){
+		i++; // increment past the second > or <
+	    }
 	} else { // building component of command
 	    last_space_was_whitespace = false;
 	    commands.char_arr[whitespace_count][command_len] = cmd->cmdstr[i];
@@ -422,6 +436,7 @@ void free_str_arr(str_arr *str_arr){
     for(i = 0; i < NUM_COMMANDS; i++){
 	free(str_arr->char_arr[i]);
     }
+    free(str_arr->redirects);
     free(str_arr->char_arr);
 }
 

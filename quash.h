@@ -39,8 +39,31 @@ typedef struct command_t {
 } command_t;
 
 #define NUM_COMMANDS 20
+/**
+ * Enum to a handle redirect handling and inspection.
+ */
+typedef enum redirect{
+    PIPE, // |
+    OWRITE_R, // >
+    OWRITE_L, // <
+    AWRITE_R, // >>
+    AWRITE_L // <<
+} redirect;
+
+/**
+ * A structure to keep track of all redirects and their locations in the command
+ */
+typedef struct ri_pair{
+    redirect redirect;
+    size_t r_index;
+} ri_pair;
+
+/**
+ * Holds parsed information from a command_t
+ */
 typedef struct str_arr {
     char** char_arr;
+    ri_pair* redirects;
     size_t length;
 } str_arr;
 
@@ -176,8 +199,8 @@ void expand_buff_with_vars(char* buffer, char* command);
  * Checks if a string is an IO redirect string
  *
  * @param str - the string to compare
- * @returns True if str equals >, >>, <, << or |, false otherwise
+ * @returns 0 if the string is not a redirect, otherwise it returns the redirect enum
  */
-bool is_redirect(char* str);
+redirect which_redirect(char* str);
 
 #endif // QUASH_H
