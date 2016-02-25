@@ -149,37 +149,72 @@ bool get_command(command_t* cmd, FILE* in) {
  */
 bool handle_command(command_t* cmd){
     str_arr command_list = mk_str_arr(cmd);
+    int c_index, r_index, next_r_index, status;
+    int (*pipe_fds)[2] = (int*) malloc(command_list.r_length * sizeof(int[2]));
+    pid_t *pids = (pid_t*) malloc(command_list.r_length * sizeof(pid_t));
+    pid_t pid; 
     char* cursor;
 
-    if(command_list.length >= 1 && strlen(command_list.char_arr[0])){ 
+    if(command_list.length >= 1 && strlen(command_list.char_arr[0])){
+	// check for exit or quit, ignored otherwise!
 	cursor = command_list.char_arr[0];
-
 	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
 	    free_str_arr(&command_list);
 	    terminate();
 	    return true; 
+	}  else if(!strcmp(cursor, "set")){ // set is also slightly special
+	    set(command_list);
 	} else if(!strcmp(cursor, "cd")){
 	    cd(command_list);
-	} else if(!strcmp(cursor, "pwd")){
-	    pwd();
-	} else if(!strcmp(cursor, "set")){
-	    set(command_list);
+	} else if(validate(&command_list)){
+	    // all other commands can be handled the same way (basically)	    
+	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
+		cursor = command_list.char_arr[c_index];
+/*		pid = fork();
 
-	} else if(!strcmp(cursor, "jobs")){
-
-	} else if(!strcmp(cursor, "echo")){
-	    echo(command_list);
-	    // ignores pipes and redirects right now 
-
-	} else {
-	    if(execute(command_list)){
-		printf("Unable to find %s\n", command_list.char_arr[0]);
+		if(pid == 0){ // child process
+		    // setup the pipes
+		    if(command_list.redirects[r_index].redirect == PIPE){
+			
+		    }*/
+		    if(r_index < command_list.r_length){
+			pipe(pipe_fds[r_index]);
+		    }		
+		    if(!strcmp(cursor, "pwd")){
+			pwd();
+		    } else if(!strcmp(cursor, "jobs")){
+			
+		    } else if(!strcmp(cursor, "echo")){
+			echo(command_list, &c_index, command_list.length);
+			// ignores pipes and redirects right now 
+		    } else {
+			if(status = execute(command_list, &c_index, command_list.length)){
+//			printf("Exited with error: %d\n", status);
+			}
+		    }
+/*		} else { 
+		    
+		}*/
 	    }
+	} else {
+	    printf("Parse error with redirects \n");
 	}
     }
+    free(pipe_fds);
+    free(pids);
     free_str_arr(&command_list);    
     return true;
 	
+}
+
+bool validate(str_arr *command_list){
+    int i;
+    for(i = 0; i < command_list->r_length; i++){
+	if(command_list->redirects[i].r_index > command_list->length){
+	    return false;
+	}
+    }
+    return true;
 }
 
 void cd(str_arr command_list){
@@ -264,7 +299,7 @@ redirect which_redirect(char* str){
     return 0;
 }
 
-int execute(str_arr command_list){
+int execute(str_arr command_list, int *start_index, int stop_index){
     char* full_exec_path = malloc_command();
     pid_t exec_proc; 
 
@@ -272,7 +307,7 @@ int execute(str_arr command_list){
     int i, j, status;
     bool run_in_bg = false;
     
-    for(i = 1; i < command_list.length; i++){
+    for(i = *start_index; i < stop_index; i++){
 	if(!strcmp(command_list.char_arr[i], "&")){ 
 	    run_in_bg = true;
 	    break;
@@ -283,6 +318,7 @@ int execute(str_arr command_list){
 	args[j]  = malloc_command();
 	expand_buff_with_vars(args[j], command_list.char_arr[j]);
     }
+    *start_index = j;
     exec_proc = fork();
     
     if(exec_proc == 0){
@@ -318,18 +354,18 @@ int execute(str_arr command_list){
     return status;
 }
 
-void echo(str_arr command_list){
+void echo(str_arr command_list, int *start_index, int end_index){
     int i;
     char* cursor;
     char* buffer = malloc_command();
     
-    for(i = 1; i < command_list.length; i++){
+    for(i = *start_index + 1; i < end_index; i++){
 	cursor = command_list.char_arr[i];
-	expand_buff_with_vars(buffer, cursor);
-	printf("%s ", buffer);
-	
+	expand_buff_with_vars(buffer, cursor);	
+	printf("%s ", buffer);	
     }
     printf("\n");
+    *start_index = i;
     free(buffer);
 };
 
@@ -386,13 +422,13 @@ void get_home_dir(char* buffer){
 
 str_arr mk_str_arr(command_t* cmd){
     str_arr commands;
-    bool last_space_was_whitespace = false, found_quote = false; // so commands can be more than one ' ' apart or surrounded by "
+    bool last_space_was_delim = false, found_quote = false; // so commands can be more than one ' ' apart or surrounded by "
     int i, whitespace_count = 0, command_len = 0, redirect_index = 0;
     redirect found_redirect;
 
     // allocate number of strings (only allows up to *NUM_COMMANDS* fields right now!)
     commands.char_arr  = (char**) malloc(NUM_COMMANDS * sizeof(char*));
-    commands.redirects = (ri_pair*) malloc(NUM_COMMANDS * sizeof(ri_pair));
+    commands.redirects = (ri_pair*) malloc(NUM_COMMANDS * sizeof(ri_pair));    
     // allocate some space for the strings (fairly arbitrary)
     for(i = 0; i < NUM_COMMANDS; i++){
 	commands.char_arr[i] = (char*) malloc(MAX_ARR_STR_LENGTH * sizeof(char));	
@@ -401,33 +437,35 @@ str_arr mk_str_arr(command_t* cmd){
     // this will segfault if whitespace_count exceeds 20 or command_len exceeds MAX_COMMAND_LENGTH / 10
     for(i = 0; i < cmd->cmdlen + 1; i++){
 	if((cmd->cmdstr[i] == ' ' && !found_quote) || cmd->cmdstr[i] == '\0'){ // found component of command or end
-	    if(!last_space_was_whitespace){
+	    if(!last_space_was_delim){
 		commands.char_arr[whitespace_count][command_len] = '\0';
 		command_len = 0;
 		whitespace_count++;
 	    }
-	    last_space_was_whitespace = true;
+	    last_space_was_delim = true;
 	} else if(cmd->cmdstr[i] == '"'){
-	    last_space_was_whitespace = false;
+	    last_space_was_delim = false;
 	    found_quote = !found_quote;
 	} else if(found_redirect = which_redirect(&cmd->cmdstr[i])){
 	    commands.redirects[redirect_index].redirect = found_redirect;
 	    commands.redirects[redirect_index++].r_index = whitespace_count; 
-	    if(!last_space_was_whitespace){ // form is foo bar< ..
+	    if(!last_space_was_delim){ // form is foo bar< ..
 		// wrap up last command
 		commands.char_arr[whitespace_count++][command_len++] = '\0';		
 	    } 
 	    if(found_redirect == AWRITE_R || found_redirect == AWRITE_L){
 		i++; // increment past the second > or <
 	    }
+	    last_space_was_delim = true;
 	} else { // building component of command
-	    last_space_was_whitespace = false;
+	    last_space_was_delim = false;
 	    commands.char_arr[whitespace_count][command_len] = cmd->cmdstr[i];
 	    command_len++;
 	}
     }
     
     commands.length = whitespace_count;
+    commands.r_length = redirect_index;
     return commands;
 }
 

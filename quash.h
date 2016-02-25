@@ -65,6 +65,7 @@ typedef struct str_arr {
     char** char_arr;
     ri_pair* redirects;
     size_t length;
+    size_t r_length;
 } str_arr;
 
 /**
@@ -149,8 +150,10 @@ char* malloc_command();
  * Performs the builtin command "echo" - handles sys environment variables as well
  * @param command_list - the commands parsed by caller - the first field is expected to be
  * the echo command.
+ * @param - the index to start the echo command from, updates in place
+ * @param - the final index to echo
  */
-void echo(str_arr command_list);
+void echo(str_arr command_list, int *start_index, int end_index);
 
 /**
  * Assigns a new environment variable. Takes the form of set VARNAME=VARVAL
@@ -182,9 +185,11 @@ void cd(str_arr command_list);
  *
  * @param command_list - a parsed commandstr with the first element
  * the binary and any additional ones are passed as arguments
+ * @param start_index - the index where the binary execute begins (star_index is the binary)
+ * @param stop_index  - the index of the final argument to the executable
  * @returns the integer return status of the executable
  */
-int execute(str_arr command_list);
+int execute(str_arr command_list, int *start_index, int stop_index);
 
 /**
  * Fills a provided buffer with the fully expanded command provided after performing 
@@ -202,5 +207,15 @@ void expand_buff_with_vars(char* buffer, char* command);
  * @returns 0 if the string is not a redirect, otherwise it returns the redirect enum
  */
 redirect which_redirect(char* str);
+
+/**
+ * Validates that redirects all occur in the command such that each redirect has a command to its right.
+ * Ex: *echo a b c d e >> test.txt* is valid
+ * Ex: *echo a b c d e >>* is not valid
+ * 
+ * @param command_list - the list to parse
+ * @returns true if matches the simple, expected form laid out above, false otherwise
+ */
+bool validate(str_arr *command_list);
 
 #endif // QUASH_H
