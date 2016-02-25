@@ -170,16 +170,16 @@ bool handle_command(command_t* cmd){
 	    // all other commands can be handled the same way (basically)	    
 	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
 		cursor = command_list.char_arr[c_index];
-/*		pid = fork();
+		pid = fork();
 
 		if(pid == 0){ // child process
 		    // setup the pipes
-		    if(command_list.redirects[r_index].redirect == PIPE){
-			
-		    }*/
 		    if(r_index < command_list.r_length){
 			pipe(pipe_fds[r_index]);
-		    }		
+		    }	
+		    if(command_list.redirects[r_index].redirect == PIPE){
+			
+		    }	
 		    if(!strcmp(cursor, "pwd")){
 			pwd();
 		    } else if(!strcmp(cursor, "jobs")){
@@ -192,9 +192,9 @@ bool handle_command(command_t* cmd){
 //			printf("Exited with error: %d\n", status);
 			}
 		    }
-/*		} else { 
+		} else { 
 		    
-		}*/
+		}
 	    }
 	} else {
 	    printf("Parse error with redirects \n");
