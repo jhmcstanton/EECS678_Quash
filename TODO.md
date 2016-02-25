@@ -2,10 +2,13 @@
 
 All of these are pulled from the rubric.
 
-1. ~~Executables~~
-  1. Without args
-  1. With args
+1. Executables
+  1. ~~Without args~~
+  1. ~~With args~~
   1. Allows background processes
+
+  Background processes currently don't wait, which causes zombie processes! This should be fixed
+  
 1. ~~*exit* and *quit* commands~~
 1. ~~Work location management~~
   1. ~~cd (with and without args) (chdir function? Could it be that easy?)~~
