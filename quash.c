@@ -27,6 +27,28 @@ static char terminal_prompt[MAX_COMMAND_LENGTH];
 static int redirect_ct = 5;
 static char *redirects[5] = { ">", ">>", "<", "<<", "|"};
 
+#define MAX_NUM_JOBS 10 // arbitrary. my system's max is 32768...
+int CUR_NUM_JOBS = 0; // to be incremented/decremented with job creation/deletion
+
+/**************************************************************************
+ * Job Stuff
+ **************************************************************************/
+struct job_t {
+    pid_t pid; 
+    char command[MAX_COMMAND_LENGTH];
+};
+struct job_t jobs[MAX_NUM_JOBS]; // The job list
+
+void printJobs(){
+	printf("%d", CUR_NUM_JOBS);
+	printf("\n");
+	printf("There are currently %s jobs", CUR_NUM_JOBS);
+	int i;
+	for(i = 1; i < CUR_NUM_JOBS; i++) {
+		printf("-- in printJobs() --\n");
+		printf("[%d] %d %s", i, jobs->pid, jobs->command);
+	}
+}
 
 /**************************************************************************
  * Private Functions 
@@ -41,7 +63,7 @@ static void maintenance(){
 
     for(i = 0; i < MAX_COMMAND_LENGTH && cwd[i] != '\0'; i++){
 	if(cwd[i] == '/'){
-	    j = i + 1; 
+	    j = i + 1;
 	}
     }
     shift_str_left(j, cwd);
@@ -55,6 +77,20 @@ static void maintenance(){
     sprintf(terminal_prompt, "Quash![%s@%s %s]$ ", getlogin(), hostname, cwd);
     free(cwd);
     free(hostname);
+
+    // Job Maintenance
+    CUR_NUM_JOBS--;
+
+    int k;
+    for (k = 1; k < MAX_NUM_JOBS; k++){
+	if (jobs[k].pid == NULL){
+		int l = k;
+    		while (l <= CUR_NUM_JOBS){
+        		jobs[l] = jobs[l+1]; // shift left
+			l++;
+    		}
+	}
+    }
 }
 /**
  * Start the main loop by setting the running flag to true
@@ -76,27 +112,6 @@ bool is_running(){
 
 void terminate() {
     running = false;
-}
-
-/**************************************************************************
- * Job Stuff
- **************************************************************************/
-const int MAX_NUM_JOBS = 10; // arbitrary. my system's max is 32768...
-int CUR_NUM_JOBS = 0; // to be incremented/decremented with job creation/deletion
-
-// Job Structure
-struct job_t {
-    pid_t pid; 
-    int jid;
-    char command[MAX_COMMAND_LENGTH];
-};
-//struct job_t jobs[MAX_NUM_JOBS]; /* The job list */
-
-void printJobs(struct job_t *jobs){
-	int i;
-	for(i = 0; i < MAX_NUM_JOBS; i++) {
-		printf("[%d] %d %s", jobs->jid, jobs->pid, jobs->command);
-	}
 }
 /* ********************************************************************** */
 
@@ -166,6 +181,8 @@ bool handle_command(command_t* cmd){
 	    set(command_list);
 
 	} else if(!strcmp(cursor, "jobs")){
+		printf("about to print jobs");
+		printJobs();
 
 	} else if(!strcmp(cursor, "echo")){
 	    echo(command_list);
@@ -283,9 +300,13 @@ int execute(str_arr command_list){
     }
     exec_proc = fork();
     
-    if(exec_proc == 0){
+    CUR_NUM_JOBS += 1;
+    jobs[CUR_NUM_JOBS].pid = exec_proc;
+    strcpy(jobs[CUR_NUM_JOBS].command, command_list.char_arr[0]);
+        
+    if(exec_proc == 0){ // Child process
 	args[j] = NULL;
-
+	
 	if(run_in_bg){
 	    int hole = open("/dev/null", O_WRONLY);
 	    dup2(hole, STDOUT_FILENO);
@@ -300,8 +321,8 @@ int execute(str_arr command_list){
 	    free(args[j]);
 	}
 	free(args);
-	exit(status);
-    } else if(!run_in_bg){
+        exit(status);
+    } else if(!run_in_bg){ // Parent process
 	if(waitpid(exec_proc, &status, 0) == -1){
 	    printf("Error in process: %d\n", exec_proc);
 	}	    
