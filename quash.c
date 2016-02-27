@@ -350,7 +350,6 @@ redirect which_redirect(char* str){
     // redirects is defined!
     for(i = 0; i < redirect_ct; i++){
 	if(!strncmp(str, redirects[i], strlen(redirects[i]))){
-	    printf("Found redirect: %d\n", i);
 	    return i;
 	}
     }
