@@ -16,7 +16,8 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <ctype.h>
-#include <fcntl.h> 
+#include <fcntl.h>
+#include <sys/stat.h>
 
 /**
  * Specify the maximum number of characters accepted by the command string
@@ -44,10 +45,10 @@ typedef struct command_t {
  */
 typedef enum redirect{
     PIPE, // |
-    OWRITE_R, // >
-    OWRITE_L, // <
     AWRITE_R, // >>
-    AWRITE_L // <<
+    AWRITE_L, // <<
+    OWRITE_R, // >
+    OWRITE_L, // <    
 } redirect;
 
 /**
