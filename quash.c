@@ -25,7 +25,7 @@
 static bool running;
 static char terminal_prompt[MAX_COMMAND_LENGTH];
 static int redirect_ct = 5;
-static char *redirects[5] = { "|", ">>", "<<", ">", "<"}; //{ "|", ">", "<", ">>", "<<" };
+static char *redirects[5] = { "|", ">>", "<<", ">", "<"}; 
 
 
 /**************************************************************************
@@ -178,7 +178,6 @@ bool handle_command(command_t* cmd){
 		}
 	    }
 	    int loop_delete_this = 0;
-	    int i;
 
 	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
 		cursor = command_list.char_arr[c_index];
@@ -224,6 +223,7 @@ bool handle_command(command_t* cmd){
 			fprintf(stderr, "STDOUT dup'd to write end of pipe: %d\n", r_index);
 			dup2(pipe_fds[r_index][1], STDOUT_FILENO); // upcoming redirect requires pipe
 		    } 
+
 		    if(!strcmp(cursor, "pwd")){
 			pwd();
 		    } else if(!strcmp(cursor, "jobs")){
@@ -261,6 +261,7 @@ bool handle_command(command_t* cmd){
 		    close(pipe_fds[r_index][1]);		    
 		    exit(EXIT_FAILURE);
 		} else { // successful
+  		    printf("fork finished successfully\n");
 		    // not sure whethere the ...].rindex case should have -1 or - 0
 		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index - 1 : command_list.length;
 
@@ -268,11 +269,14 @@ bool handle_command(command_t* cmd){
 		    // general redirect case 
 		    if(command_list.r_length > 0){
 			// done writing to this pipe
-			//close(pipe_fds[r_index][1]); // this is causing a segfault for somereason
 			if(r_index > 0){
 			    // done reading from previous pipe
 //			    close(pipe_fds[r_index - 1][1]);
 			    close(pipe_fds[r_index - 1][0]);
+			}
+			if(r_index < command_list.r_length){
+			    printf("closing write end of pipe %d\n", r_index);
+			    close(pipe_fds[r_index][1]); // this is causing a segfault for somereason
 			}
 		    }
 		    // handle > and >> cases
@@ -428,7 +432,6 @@ int execute(str_arr command_list, int *start_index, int stop_index){
 	    // when running things in the background we can just eat the output
 	    int hole = open("/dev/null", O_WRONLY);
 	    dup2(hole, STDOUT_FILENO);
-	    dup2(hole, STDERR_FILENO);
 	    close(hole);
 	}
 	status = execvp(args[0], args);
