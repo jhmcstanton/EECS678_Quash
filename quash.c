@@ -200,6 +200,7 @@ bool handle_command(command_t* cmd){
 		pid = fork();
 		
 		if(pid == 0){ // child process
+	  	    status = EXIT_SUCCESS; // being optimistic
 		    next_r_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index : command_list.length;
 		    printf("start_i : %d, stop_i: %d, loop: %d\n", c_index, next_r_index, loop_delete_this);
 		    // this isn't really doing anything yet
@@ -216,8 +217,8 @@ bool handle_command(command_t* cmd){
 			dup2(pipe_fds[r_index - 1][0], STDIN_FILENO); // commands after first read from previous output pipe
 			fprintf(stderr, "reading from pipe %d instead of stdin\n", r_index - 1);
 		    }
-		    if(command_list.r_length > 0){
-			close(pipe_fds[r_index][0]); // this process will be reading from the last pipe
+		    if(command_list.r_length > 0 && r_index < command_list.r_length){
+			close(pipe_fds[r_index][0]); // this process will be reading from the previous pipe
 		    }
 		    if(next_r_index < command_list.length){
 			fprintf(stderr, "STDOUT dup'd to write end of pipe: %d\n", r_index);
@@ -234,8 +235,10 @@ bool handle_command(command_t* cmd){
 		    } else {
 			fprintf(stderr, "in execute: bin: %s\n", command_list.char_arr[c_index]);
 			fprintf(stderr, "c_i: %d, n_r_i: %d\n", c_index, next_r_index);
-			if(status = execute(command_list, &c_index, next_r_index)){
-//			printf("Exited with error: %d\n", status);
+			status = execute(command_list, &c_index, next_r_index);
+			if(status == E_BIN_MISSING){
+			  fprintf(stderr, "Could not find %s\n", command_list.char_arr[c_index]);
+			  // done trying commands since something is missing
 			}
 		    }
 		    
@@ -248,7 +251,9 @@ bool handle_command(command_t* cmd){
 		    // child process is done!
 		    free_str_arr(&command_list);
 		    free(pipe_fds);
-		    exit(EXIT_SUCCESS);
+		    // returns 0 if executable was found otherwise
+		    // 1 if it was missing
+		    exit(status == E_BIN_MISSING ? 1 : 0); 
 		} else if(waitpid(pid, &status, 0) == -1){
 		    fprintf(stderr, "Process encountered an error. ERROR%d", errno);
 		    terminate();
@@ -260,9 +265,20 @@ bool handle_command(command_t* cmd){
 
 		    close(pipe_fds[r_index][1]);		    
 		    exit(EXIT_FAILURE);
+		} else if(WEXITSTATUS(status) == 1){
+		    // do some cleanup then stop dealing with the command since something broke
+		    if(command_list.r_length > 0){
+			if(r_index > 0){
+			    close(pipe_fds[r_index - 1][0]);
+			}
+			if(r_index < command_list.r_length){
+			    close(pipe_fds[r_index][1]);
+			}
+		    }
+		    break;
 		} else { // successful
   		    printf("fork finished successfully\n");
-		    // not sure whethere the ...].rindex case should have -1 or - 0
+		    // not sure whethere the ...].r_index case should have -1 or - 0
 		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index - 1 : command_list.length;
 
 
@@ -271,7 +287,6 @@ bool handle_command(command_t* cmd){
 			// done writing to this pipe
 			if(r_index > 0){
 			    // done reading from previous pipe
-//			    close(pipe_fds[r_index - 1][1]);
 			    close(pipe_fds[r_index - 1][0]);
 			}
 			if(r_index < command_list.r_length){
@@ -458,7 +473,7 @@ int execute(str_arr command_list, int *start_index, int stop_index){
     free(args);
     
     free(full_exec_path);
-    *start_index = j;
+    //    *start_index = j;
     return status;
 }
 

@@ -26,6 +26,11 @@
 #define MAX_ARR_STR_LENGTH (1024 / 10)
 
 /**
+ * These are error codes that we will look out for
+ */ 
+#define E_BIN_MISSING 65280
+
+/**
  * Holds information about a command.
  */
 typedef struct command_t {
