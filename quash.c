@@ -181,12 +181,10 @@ bool handle_command(command_t* cmd){
 
 	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
 		cursor = command_list.char_arr[c_index];
-		printf("loop: %d, cursor: %s\n", loop_delete_this++, cursor);
 
 		// make sure any required pipe opens correctly
 		if(command_list.r_length > 0 && r_index < command_list.r_length && pipe(pipe_fds[r_index]) == -1){
 		    fprintf(stderr, "Pipe creation error\n");
-		    printf("r_i: %d, r_l: %d\n", r_index, command_list.r_length);
 		    terminate();
 		    free(pipe_fds);
 		    free_str_arr(&command_list);
@@ -195,33 +193,21 @@ bool handle_command(command_t* cmd){
 		// remove this
 		if(r_index < command_list.r_length){
 		    redirect = command_list.redirects[r_index].redirect;
-		    printf("found redirect in redirects: %d\n", redirect);
 		}
 		pid = fork();
 		
 		if(pid == 0){ // child process
 	  	    status = EXIT_SUCCESS; // being optimistic
 		    next_r_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index : command_list.length;
-		    printf("start_i : %d, stop_i: %d, loop: %d\n", c_index, next_r_index, loop_delete_this);
 		    // this isn't really doing anything yet
 		    // delete this
-		    if(r_index < command_list.r_length  && redirect == PIPE){
-			printf("Found pipe redirect\n");
-		    } else {
-			printf("No pipe found\n");
-		    }
-//		    printf("n_r_i: %d\n", next_r_index);
-/*		    printf("r_i: %d, r_length: %d\n", r_index, command_list.r_length);
-		    printf("c_i: %d, c_length: %d\n", c_index, command_list.length);*/
 		    if(r_index > 0 && command_list.r_length > 0){
 			dup2(pipe_fds[r_index - 1][0], STDIN_FILENO); // commands after first read from previous output pipe
-			fprintf(stderr, "reading from pipe %d instead of stdin\n", r_index - 1);
 		    }
 		    if(command_list.r_length > 0 && r_index < command_list.r_length){
 			close(pipe_fds[r_index][0]); // this process will be reading from the previous pipe
 		    }
 		    if(next_r_index < command_list.length){
-			fprintf(stderr, "STDOUT dup'd to write end of pipe: %d\n", r_index);
 			dup2(pipe_fds[r_index][1], STDOUT_FILENO); // upcoming redirect requires pipe
 		    } 
 
@@ -233,12 +219,9 @@ bool handle_command(command_t* cmd){
 			echo(command_list, &c_index, next_r_index);
 			// ignores pipes and redirects right now 
 		    } else {
-			fprintf(stderr, "in execute: bin: %s\n", command_list.char_arr[c_index]);
-			fprintf(stderr, "c_i: %d, n_r_i: %d\n", c_index, next_r_index);
 			status = execute(command_list, &c_index, next_r_index);
 			if(status == E_BIN_MISSING){
 			  fprintf(stderr, "Could not find %s\n", command_list.char_arr[c_index]);
-			  // done trying commands since something is missing
 			}
 		    }
 		    
@@ -277,7 +260,6 @@ bool handle_command(command_t* cmd){
 		    }
 		    break;
 		} else { // successful
-  		    printf("fork finished successfully\n");
 		    // not sure whethere the ...].r_index case should have -1 or - 0
 		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index - 1 : command_list.length;
 
@@ -290,7 +272,6 @@ bool handle_command(command_t* cmd){
 			    close(pipe_fds[r_index - 1][0]);
 			}
 			if(r_index < command_list.r_length){
-			    printf("closing write end of pipe %d\n", r_index);
 			    close(pipe_fds[r_index][1]); // this is causing a segfault for somereason
 			}
 		    }
@@ -308,9 +289,6 @@ bool handle_command(command_t* cmd){
 			}
 			close(o_file);
 		    }
-/*		    printf("bottom of loop\n");
-		    printf("c_i :%d, r_i: %d\n", c_index, r_index);
-		    printf("c_l: %d, r_l: %d\n", command_list.length, command_list.r_length);*/
 		}
 	    }
 	} else {
@@ -464,12 +442,9 @@ int execute(str_arr command_list, int *start_index, int stop_index){
 	}	    
     }
     // free all args
-    fprintf(stderr, "args used: ");
     for(j = 0; j < k; j++){
-	fprintf(stderr, j > 0 ? ", %s": "%s", args[j]);
 	free(args[j]);
     }
-    fprintf(stderr, ".\nnew start_index: %d\n", *start_index);
     free(args);
     
     free(full_exec_path);
