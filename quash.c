@@ -156,11 +156,11 @@ bool handle_command(command_t* cmd){
 	pipe_fds[i] = (int*) malloc(2 * sizeof(int));
     }
     pid_t pid;
-    redirect redirect;    
+    redirect redirect = 0;    
     char* cursor;
 
     if(command_list.length >= 1 && strlen(command_list.char_arr[0])){
-	// check for exit or quit, ignored otherwise!
+	// check for exit or quit
 	cursor = command_list.char_arr[0];
 	if(!strcmp(cursor, "exit") || !strcmp(cursor, "quit")){
 	    free_str_arr(&command_list);
@@ -168,7 +168,7 @@ bool handle_command(command_t* cmd){
 	    return true; 
 	}  else if(!strcmp(cursor, "set")){ // set is also slightly special
 	    set(command_list);
-	} else if(!strcmp(cursor, "cd")){
+	} else if(!strcmp(cursor, "cd")){ // I gues this is too..
 	    cd(command_list);
 	} else if(validate(&command_list)){
 	    // all other commands can be handled the same way (basically)
@@ -177,35 +177,53 @@ bool handle_command(command_t* cmd){
 		    r_index++;
 		}
 	    }
+	    int loop_delete_this = 0;
+	    int i;
+
 	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
 		cursor = command_list.char_arr[c_index];
-		if(command_list.r_length > 0 && pipe(pipe_fds[r_index]) == -1){
+		printf("loop: %d, cursor: %s\n", loop_delete_this++, cursor);
+
+		// make sure any required pipe opens correctly
+		if(command_list.r_length > 0 && r_index < command_list.r_length && pipe(pipe_fds[r_index]) == -1){
 		    fprintf(stderr, "Pipe creation error\n");
+		    printf("r_i: %d, r_l: %d\n", r_index, command_list.r_length);
 		    terminate();
 		    free(pipe_fds);
 		    free_str_arr(&command_list);
 		    exit(EXIT_FAILURE);
-		}		
-		pid = fork();
+		}
+		// remove this
 		if(r_index < command_list.r_length){
 		    redirect = command_list.redirects[r_index].redirect;
-		    if(redirect == OWRITE_R || redirect == AWRITE_R){
-			int o_file = open(command_list.char_arr[command_list.redirects[r_index].r_index],
-					   redirect == OWRITE_R ? O_WRONLY : O_WRONLY | O_APPEND);
-			dup2(pipe_fds[r_index][0], o_file);
-		    }
+		    printf("found redirect in redirects: %d\n", redirect);
 		}
+		pid = fork();
+		
 		if(pid == 0){ // child process
 		    next_r_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index : command_list.length;
+		    printf("start_i : %d, stop_i: %d, loop: %d\n", c_index, next_r_index, loop_delete_this);
+		    // this isn't really doing anything yet
+		    // delete this
+		    if(r_index < command_list.r_length  && redirect == PIPE){
+			printf("Found pipe redirect\n");
+		    } else {
+			printf("No pipe found\n");
+		    }
+//		    printf("n_r_i: %d\n", next_r_index);
+/*		    printf("r_i: %d, r_length: %d\n", r_index, command_list.r_length);
+		    printf("c_i: %d, c_length: %d\n", c_index, command_list.length);*/
 		    if(r_index > 0 && command_list.r_length > 0){
 			dup2(pipe_fds[r_index - 1][0], STDIN_FILENO); // commands after first read from previous output pipe
+			fprintf(stderr, "reading from pipe %d instead of stdin\n", r_index - 1);
 		    }
 		    if(command_list.r_length > 0){
-			close(pipe_fds[r_index][0]);
+			close(pipe_fds[r_index][0]); // this process will be reading from the last pipe
 		    }
 		    if(next_r_index < command_list.length){
+			fprintf(stderr, "STDOUT dup'd to write end of pipe: %d\n", r_index);
 			dup2(pipe_fds[r_index][1], STDOUT_FILENO); // upcoming redirect requires pipe
-		    }
+		    } 
 		    if(!strcmp(cursor, "pwd")){
 			pwd();
 		    } else if(!strcmp(cursor, "jobs")){
@@ -214,30 +232,53 @@ bool handle_command(command_t* cmd){
 			echo(command_list, &c_index, next_r_index);
 			// ignores pipes and redirects right now 
 		    } else {
+			fprintf(stderr, "in execute: bin: %s\n", command_list.char_arr[c_index]);
+			fprintf(stderr, "c_i: %d, n_r_i: %d\n", c_index, next_r_index);
 			if(status = execute(command_list, &c_index, next_r_index)){
 //			printf("Exited with error: %d\n", status);
 			}
 		    }
+		    
 		    if(command_list.r_length > 0){
-			close(pipe_fds[r_index][1]);
+			close(pipe_fds[r_index][1]); // done writing to pipe, closing it up
+			if(next_r_index > 0){
+			    close(pipe_fds[r_index - 1][0]); // done reading
+			}
 		    }
+		    // child process is done!
+		    free_str_arr(&command_list);
+		    free(pipe_fds);
 		    exit(EXIT_SUCCESS);
 		} else if(waitpid(pid, &status, 0) == -1){
-		    fprintf(stderr, "Process 3 encountered an error. ERROR%d", errno);
+		    fprintf(stderr, "Process encountered an error. ERROR%d", errno);
 		    terminate();
 		    for(i = 0; i < command_list.r_length; i++){
 			free(pipe_fds[i]);
 		    }
 		    free(pipe_fds);
 		    free_str_arr(&command_list);
-		    close(pipe_fds[r_index][0]);
+
 		    close(pipe_fds[r_index][1]);		    
 		    exit(EXIT_FAILURE);
-		} else { // successful		    
-		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index : command_list.length;
+		} else { // successful
+		    // not sure whethere the ...].rindex case should have -1 or - 0
+		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index - 1 : command_list.length;
+
+
+		    // general redirect case 
+		    if(command_list.r_length > 0){
+			// done writing to this pipe
+			//close(pipe_fds[r_index][1]); // this is causing a segfault for somereason
+			if(r_index > 0){
+			    // done reading from previous pipe
+//			    close(pipe_fds[r_index - 1][1]);
+			    close(pipe_fds[r_index - 1][0]);
+			}
+		    }
+		    // handle > and >> cases
 		    if((redirect == OWRITE_R || redirect == AWRITE_R) && command_list.r_length > 0){
-			close(pipe_fds[r_index][1]);
 			c_index++;
+			
 			size_t buf_size;
 			char buf[MAX_COMMAND_LENGTH];
 			int o_file = open(command_list.char_arr[command_list.redirects[r_index].r_index],
@@ -247,8 +288,10 @@ bool handle_command(command_t* cmd){
 			    write(o_file, buf, buf_size);
 			}
 			close(o_file);
-			close(pipe_fds[r_index][0]);
-		    } 
+		    }
+/*		    printf("bottom of loop\n");
+		    printf("c_i :%d, r_i: %d\n", c_index, r_index);
+		    printf("c_l: %d, r_l: %d\n", command_list.length, command_list.r_length);*/
 		}
 	    }
 	} else {
@@ -353,7 +396,7 @@ redirect which_redirect(char* str){
 	    return i;
 	}
     }
-    return 0;
+    return -1;
 }
 
 int execute(str_arr command_list, int *start_index, int stop_index){
@@ -361,7 +404,7 @@ int execute(str_arr command_list, int *start_index, int stop_index){
     pid_t exec_proc; 
 
     char** args;
-    int i, j, status;
+    int i, j, k, status;
     bool run_in_bg = false;
     
     for(i = *start_index; i < stop_index; i++){
@@ -371,17 +414,18 @@ int execute(str_arr command_list, int *start_index, int stop_index){
 	}	    
     }
     args = (char**) malloc(i * sizeof(char*));
-    for(j = 0; j < i; j++){
-	args[j]  = malloc_command();
-	expand_buff_with_vars(args[j], command_list.char_arr[j]);
+    for(j = *start_index, k = 0; j < i; j++, k++){
+	args[k]  = malloc_command();
+	expand_buff_with_vars(args[k], command_list.char_arr[j]);
     }
-    *start_index = j;
+
     exec_proc = fork();
     
     if(exec_proc == 0){
 	args[j] = NULL;
 
 	if(run_in_bg){
+	    // when running things in the background we can just eat the output
 	    int hole = open("/dev/null", O_WRONLY);
 	    dup2(hole, STDOUT_FILENO);
 	    dup2(hole, STDERR_FILENO);
@@ -391,7 +435,7 @@ int execute(str_arr command_list, int *start_index, int stop_index){
 	free_str_arr(&command_list);
 	terminate();
 	// free all args
-	for(j = 0; j < i; j++){
+	for(j = 0; j < k; j++){
 	    free(args[j]);
 	}
 	free(args);
@@ -402,12 +446,16 @@ int execute(str_arr command_list, int *start_index, int stop_index){
 	}	    
     }
     // free all args
-    for(j = 0; j < i; j++){
+    fprintf(stderr, "args used: ");
+    for(j = 0; j < k; j++){
+	fprintf(stderr, j > 0 ? ", %s": "%s", args[j]);
 	free(args[j]);
     }
+    fprintf(stderr, ".\nnew start_index: %d\n", *start_index);
     free(args);
     
     free(full_exec_path);
+    *start_index = j;
     return status;
 }
 
@@ -503,7 +551,7 @@ str_arr mk_str_arr(command_t* cmd){
 	} else if(cmd->cmdstr[i] == '"'){
 	    last_space_was_delim = false;
 	    found_quote = !found_quote;
-	} else if(found_redirect = which_redirect(&cmd->cmdstr[i])){
+	} else if( (found_redirect = which_redirect(&cmd->cmdstr[i])) + 1){
 	    commands.redirects[redirect_index].redirect = found_redirect;
 	    commands.redirects[redirect_index++].r_index = whitespace_count;
 	    if(!last_space_was_delim){ // form is foo bar< ..
@@ -523,6 +571,7 @@ str_arr mk_str_arr(command_t* cmd){
     
     commands.length = whitespace_count;
     commands.r_length = redirect_index;
+
     return commands;
 }
 
