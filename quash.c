@@ -24,8 +24,7 @@
 // to private in other languages.
 static bool running;
 static char terminal_prompt[MAX_COMMAND_LENGTH];
-static int redirect_ct = 5;
-static char *redirects[5] = { "|", ">>", "<<", ">", "<"}; 
+static char *redirects[redirect_ct] = { "|", ">>", ">", "<"}; 
 
 
 /**************************************************************************
@@ -199,15 +198,31 @@ bool handle_command(command_t* cmd){
 		if(pid == 0){ // child process
 	  	    status = EXIT_SUCCESS; // being optimistic
 		    next_r_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index : command_list.length;
-		    // this isn't really doing anything yet
-		    // delete this
-		    if(r_index > 0 && command_list.r_length > 0){
-			dup2(pipe_fds[r_index - 1][0], STDIN_FILENO); // commands after first read from previous output pipe
+		   
+		    int input_file = STDIN_FILENO; // placeholder value
+		    if(command_list.r_length > 0){
+			// found a < in the command, this is the priority stdin redirect
+			if(redirect == READ_L && r_index < command_list.r_length && r_index + 1 < command_list.length){
+			    printf("opening file %s for stdin \n", command_list.char_arr[r_index + 1]);			    
+			    input_file = open(command_list.char_arr[r_index + 1], O_RDONLY);
+			    
+			    if(input_file < 0){
+				printf("error opening file %s\n", command_list.char_arr[r_index + 1]);
+				free(pipe_fds);
+				free_str_arr(&command_list);
+				exit(2); // file missing
+			    }
+			    dup2(input_file, STDIN_FILENO);
+			} else if(r_index > 0) { // otherwise redirect to previous commands pipe if available 
+			    dup2(pipe_fds[r_index - 1][0], STDIN_FILENO); // commands after first read from previous output pipe      
+			}
 		    }
 		    if(command_list.r_length > 0 && r_index < command_list.r_length){
 			close(pipe_fds[r_index][0]); // this process will be reading from the previous pipe
 		    }
-		    if(next_r_index < command_list.length){
+
+		    if((redirect != READ_L && next_r_index < command_list.length) || 
+		       (redirect == READ_L && next_r_index < command_list.length - 1)){ // hopefully accounts for commands with a middle <
 			dup2(pipe_fds[r_index][1], STDOUT_FILENO); // upcoming redirect requires pipe
 		    } 
 
@@ -227,6 +242,7 @@ bool handle_command(command_t* cmd){
 		    
 		    if(command_list.r_length > 0){
 			close(pipe_fds[r_index][1]); // done writing to pipe, closing it up
+			close(input_file); // if < was found, closes stdin for worst case
 			if(next_r_index > 0){
 			    close(pipe_fds[r_index - 1][0]); // done reading
 			}
@@ -248,7 +264,7 @@ bool handle_command(command_t* cmd){
 
 		    close(pipe_fds[r_index][1]);		    
 		    exit(EXIT_FAILURE);
-		} else if(WEXITSTATUS(status) == 1){
+		} else if(WEXITSTATUS(status) > 0){
 		    // do some cleanup then stop dealing with the command since something broke
 		    if(command_list.r_length > 0){
 			if(r_index > 0){
@@ -288,6 +304,8 @@ bool handle_command(command_t* cmd){
 			    write(o_file, buf, buf_size);
 			}
 			close(o_file);
+		    } else if(redirect == READ_L && command_list.r_length > 0){
+			c_index++; 			
 		    }
 		}
 	    }
@@ -551,7 +569,7 @@ str_arr mk_str_arr(command_t* cmd){
 		// wrap up last command
 		commands.char_arr[whitespace_count++][command_len++] = '\0';		
 	    } 
-	    if(found_redirect == AWRITE_R || found_redirect == AWRITE_L){
+	    if(found_redirect == AWRITE_R){
 		i++; // increment past the second > or <
 	    }
 	    last_space_was_delim = true;

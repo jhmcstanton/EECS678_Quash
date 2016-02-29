@@ -45,16 +45,22 @@ typedef struct command_t {
 } command_t;
 
 #define NUM_COMMANDS 20
+
 /**
  * Enum to a handle redirect handling and inspection.
  */
 typedef enum redirect{
     PIPE, // |
     AWRITE_R, // >>
-    AWRITE_L, // <<
+    //    AWRIT_L, // <<
     OWRITE_R, // >
-    OWRITE_L, // <    
+    READ_L, // <    
 } redirect;
+
+/**
+ *  The number of redirects in the enum type, useful for looping over them
+ */
+#define redirect_ct (READ_L + 1)
 
 /**
  * A structure to keep track of all redirects and their locations in the command
