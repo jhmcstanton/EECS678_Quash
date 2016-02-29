@@ -32,6 +32,11 @@ static size_t next_new_job = 0;
 /**************************************************************************
  * Private Functions 
  **************************************************************************/
+/**
+ * Performed on every iteration of quash.
+ * Performs routine frees, updates, etc. All frequently required cleanup/ update
+ * function should be in here. 
+ */
 static void maintenance(){
     /* This sets up the terminal prompt */    
     char* cwd      = malloc_command();
@@ -89,8 +94,6 @@ void terminate() {
  **************************************************************************/
 
 void print_jobs(){
-    // do one more quick check before printing jobs so most up-to-date info is available
-    check_all_jobs();
     int i;
     for(i = 0; i < next_new_job; i++) {
 	printf("[%d] %d %s\n", i, jobs[i].pid, jobs[i].command);
@@ -113,6 +116,7 @@ void check_all_jobs(){
 
 	if(waitpid(jobs[i].pid, &status, WNOHANG) != 0){
 	    // next process to look at will have the same index as this one had
+	    printf("[%d] %d finished %s\n", i, jobs[i].pid, jobs[i].command);
 	    back_track = i - 1;
 	    for(; i < next_new_job - 1; i++){
 		jobs[i] = jobs[i + 1];
@@ -631,11 +635,11 @@ int main(int argc, char** argv) {
 
   // Main execution loop
   while (is_running() && get_command(&cmd, stdin)) {
+      maintenance();
       handle_command(&cmd);
       if(is_running()){
 	  printf("%s", terminal_prompt);
       }
-      maintenance();
   }
 
   if(isatty(fileno(stdin))){
