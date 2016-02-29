@@ -39,4 +39,4 @@ All of these are pulled from the rubric.
 ## Bonus Stuff
 
 1. ~~Multiple pipes (shouldn't be too bad)~~
-1. kill command
+1. ~~kill command~~
