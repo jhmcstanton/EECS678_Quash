@@ -81,6 +81,20 @@ typedef struct str_arr {
 } str_arr;
 
 /**
+ * Structure holding all job info
+ */ 
+typedef struct job_t {
+    pid_t pid; 
+    int jid;
+    char command[MAX_COMMAND_LENGTH];
+} job_t;
+
+/** 
+ * Arbitrarily assigned max number of jobs
+ */
+#define MAX_NUM_JOBS 100
+
+/**
  * Query if quash should accept more input or not.
  *
  * @return True if Quash should accept more input and false otherwise
@@ -162,8 +176,8 @@ char* malloc_command();
  * Performs the builtin command "echo" - handles sys environment variables as well
  * @param command_list - the commands parsed by caller - the first field is expected to be
  * the echo command.
- * @param - the index to start the echo command from, updates in place
- * @param - the final index to echo
+ * @param start_index - the index to start the echo command from, updates in place
+ * @param end_index - the final index to echo
  */
 void echo(str_arr command_list, int *start_index, int end_index);
 
@@ -177,6 +191,21 @@ void set(str_arr command_list);
  * Prints the current working directory.  
  */
 void pwd();
+
+
+/**
+ * Prints the current jobs in the global jobs list. These are printed in the form of
+ * [job_id] process_id command_str
+ */
+void print_jobs();
+
+/**
+ * Logs a new background job to the global jobs list. If this job would exceen #MAX_NUM_JOBS
+ * then nothing is logged.
+ * @param proc_id - the process id from the fork call used to run the command 
+ * @param command - the command, minus arguments, that is being run
+ */
+void log_job(pid_t proc_id, char* command);
 
 
 /**

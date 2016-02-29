@@ -25,6 +25,8 @@
 static bool running;
 static char terminal_prompt[MAX_COMMAND_LENGTH];
 static char *redirects[redirect_ct] = { "|", ">>", ">", "<"}; 
+static job_t jobs[MAX_NUM_JOBS];
+static size_t next_new_job = 0;
 
 
 /**************************************************************************
@@ -80,47 +82,24 @@ void terminate() {
 /**************************************************************************
  * Job Stuff
  **************************************************************************/
-const int MAX_NUM_JOBS = 10; // arbitrary. my system's max is 32768...
-int CUR_NUM_JOBS = 0; // to be incremented/decremented with job creation/deletion
 
-// Job Structure
-struct job_t {
-    pid_t pid; 
-    int jid;
-    char command[MAX_COMMAND_LENGTH];
-};
-//struct job_t jobs[MAX_NUM_JOBS]; /* The job list */
-
-void printJobs(struct job_t *jobs){
-	int i;
-	for(i = 0; i < MAX_NUM_JOBS; i++) {
-		printf("[%d] %d %s", jobs->jid, jobs->pid, jobs->command);
-	}
+void print_jobs(){
+    int i;
+    for(i = 0; i < next_new_job; i++) {
+	printf("[%d] %d %s", jobs[i].jid, jobs[i].pid, jobs[i].command);
+    }
 }
-/* ********************************************************************** */
 
-
-/**************************************************************************
- * Pipe Stuff
- **************************************************************************/
-void createPipes(int numPipesNeeded){  // numPipesNeeded is parsed from command line input string
-	int fds[numPipesNeeded][2];
-
-	// Set up necessary pipes
-	int j;
-	for (j = 0; j < numPipesNeeded; j++){
-		pipe(fds[j]);
-	}
+void log_job(pid_t proc_id, char* command){
+    if(next_new_job < MAX_NUM_JOBS){
+	jobs[next_new_job].jid = next_new_job;
+	jobs[next_new_job].pid = proc_id;
+	strcpy(jobs[next_new_job++].command, command);
+    } else {
+	fprintf(stderr, "Exceeding max number of jobs (%d)!\n Not logging new job.\n", MAX_NUM_JOBS);
+    }
 }
-/* ********************************************************************** */
 
-
-/**************************************************************************
- * I/O Redirection
- **************************************************************************/
-// standard output to file, ls > a.txt (>> appends)
-
-// standard input from file, ls < a.txt (<< appends)
 /* ********************************************************************** */
 
 
@@ -176,7 +155,6 @@ bool handle_command(command_t* cmd){
 		    r_index++;
 		}
 	    }
-	    int loop_delete_this = 0;
 
 	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
 		cursor = command_list.char_arr[c_index];
