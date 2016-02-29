@@ -52,7 +52,6 @@ typedef struct command_t {
 typedef enum redirect{
     PIPE, // |
     AWRITE_R, // >>
-    //    AWRIT_L, // <<
     OWRITE_R, // >
     READ_L, // <    
 } redirect;

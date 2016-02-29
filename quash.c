@@ -102,7 +102,6 @@ void print_jobs(){
 
 void log_job(pid_t proc_id, char* command){
     if(next_new_job < MAX_NUM_JOBS){
-	//	jobs[next_new_job].jid = next_new_job;
 	jobs[next_new_job].pid = proc_id;
 	strcpy(jobs[next_new_job++].command, command);
     } else {
@@ -150,7 +149,7 @@ bool get_command(command_t* cmd, FILE* in) {
 }
 
 /*
-  Call internal builtins 
+  Call internal builtins and executables
  */
 bool handle_command(command_t* cmd){
     str_arr command_list = mk_str_arr(cmd);
@@ -443,14 +442,7 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
     exec_proc = fork();
     
     if(exec_proc == 0){
-	args[j] = NULL;
-	
-	/*if(run_in_bg){
-	    // when running things in the background we can just eat the output
-	    int hole = open("/dev/null", O_WRONLY);
-	    dup2(hole, STDOUT_FILENO);
-	    close(hole);
-	}*/
+	args[j] = NULL;       
 
 	status = execvp(args[0], args);
 	free_str_arr(&command_list);
@@ -473,7 +465,6 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
     free(args);
     
     free(full_exec_path);
-    //    *start_index = j;
     return status;
 }
 
@@ -488,7 +479,6 @@ void echo(str_arr command_list, int *start_index, int end_index){
 	printf("%s ", buffer);	
     }
     printf("\n");
-    *start_index = i;
     free(buffer);
 };
 
