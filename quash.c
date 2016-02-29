@@ -184,6 +184,7 @@ bool handle_command(command_t* cmd){
 
 	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
 		cursor = command_list.char_arr[c_index];
+//		printf("c_i: %d, r_i: %d, cursor: %s\n", c_index, r_index, cursor);
 
 		// make sure any required pipe opens correctly
 		if(command_list.r_length > 0 && r_index < command_list.r_length && pipe(pipe_fds[r_index]) == -1){
@@ -210,7 +211,7 @@ bool handle_command(command_t* cmd){
 			    input_file = open(command_list.char_arr[r_index + 1], O_RDONLY);
 			    
 			    if(input_file < 0){
-				printf("error opening file %s\n", command_list.char_arr[r_index + 1]);
+				fprintf(stderr, "error opening file %s\n", command_list.char_arr[r_index + 1]);
 				free(pipe_fds);
 				free_str_arr(&command_list);
 				exit(2); // file missing
@@ -240,7 +241,6 @@ bool handle_command(command_t* cmd){
 			print_jobs();			
 		    } else if(!strcmp(cursor, "echo")){
 			echo(command_list, &c_index, next_r_index);
-			// ignores pipes and redirects right now 
 		    } else {
 			status = execute(command_list, &c_index, next_r_index, command_list.run_in_bg);
 			if(status == E_BIN_MISSING){
@@ -248,7 +248,7 @@ bool handle_command(command_t* cmd){
 			}
 		    }
 		    
-		    if(command_list.r_length > 0){
+		    if(command_list.r_length > 0 && r_index < command_list.r_length){
 			close(pipe_fds[r_index][1]); // done writing to pipe, closing it up
 			close(input_file); // if < was found, closes stdin for worst case
 			if(next_r_index > 0){
@@ -433,32 +433,23 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
     char** args;
     int j, k, status;
     
-    args = (char**) malloc( (stop_index - *start_index) * sizeof(char*)); //malloc(i * sizeof(char*));
+    args = (char**) malloc( (stop_index - *start_index + 1) * sizeof(char*));
     for(j = *start_index, k = 0; j < stop_index; j++, k++){
 	args[k]  = malloc_command();
 	expand_buff_with_vars(args[k], command_list.char_arr[j]);
+	//fprintf(stderr, "arg: %d, arg_str: %s, in position: %d\n", k, args[k], j);
     }
 
     exec_proc = fork();
     
     if(exec_proc == 0){
-	args[j] = NULL;       
-
-	status = execvp(args[0], args);
-	free_str_arr(&command_list);
-	terminate();
-	// free all args
-	for(j = 0; j < k; j++){
-	    free(args[j]);
-	}
-	free(args);
-	exit(status);
-    } else {
-	if(waitpid(exec_proc, &status, 0) == -1){
-	    printf("Error in process: %d\n", exec_proc);
-	}	    
+	args[k] = NULL;       
+	execvp(args[0], args);
+    } else if(waitpid(exec_proc, &status, 0) == -1){	
+	fprintf(stderr, "Error in process: %d\n", exec_proc);
     }
     // free all args
+
     for(j = 0; j < k; j++){
 	free(args[j]);
     }
