@@ -209,6 +209,15 @@ void print_jobs();
 void log_job(pid_t proc_id, char* command);
 
 /**
+ * Sends a signal to a job via the kill system call. Does not perform any process reaping.
+ *
+ * @param command_list - the command containing kill in the first position. kill_job checks
+ * if the job id provided in the command_list (command[2]) is a valid job number, so this is 
+ * a safe call. Also checks that command_list's length is greater than 2 for safety
+ */
+void kill_job(str_arr *command_list);
+
+/**
  * Checks all background jobs from the global jobs list. If anything has EXITed the waitpid
  * call *should* reap it, and every job with a higher job id (index) will be shifted left by 1
  */

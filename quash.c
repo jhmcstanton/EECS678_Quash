@@ -100,6 +100,23 @@ void print_jobs(){
     }
 }
 
+void kill_job(str_arr *command_list){
+    int sig_num, job_id;
+
+    if(command_list->length >= 3){
+	sig_num = atoi(command_list->char_arr[1]);
+	job_id  = atoi(command_list->char_arr[2]);
+    } else {
+	return;
+    }
+	
+    if(job_id < next_new_job){
+	kill(jobs[job_id].pid, sig_num);
+    } else {
+	fprintf(stderr, "Job: %d does not exist\n", job_id);
+    }
+}
+
 void log_job(pid_t proc_id, char* command){
     if(next_new_job < MAX_NUM_JOBS){
 	jobs[next_new_job].pid = proc_id;
@@ -238,7 +255,9 @@ bool handle_command(command_t* cmd){
 		    if(!strcmp(cursor, "pwd")){
 			pwd();
 		    } else if(!strcmp(cursor, "jobs")){
-			print_jobs();			
+			print_jobs();
+		    } else if(!strcmp(cursor, "kill")){
+			kill_job(&command_list);			    
 		    } else if(!strcmp(cursor, "echo")){
 			echo(command_list, &c_index, next_r_index);
 		    } else {
@@ -286,11 +305,9 @@ bool handle_command(command_t* cmd){
 		} else { // successful
 		    // log job if necessary
 		    if(command_list.run_in_bg){
-			printf("Running %s in background.\n", command_list.char_arr[c_index]);
 			log_job(pid, command_list.char_arr[c_index]);
 		    }
 
-		    // not sure whethere the ...].r_index case should have -1 or - 0
 		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index - 1 : command_list.length;	     
 		    // general redirect case 
 		    if(command_list.r_length > 0){
