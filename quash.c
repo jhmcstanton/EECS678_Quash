@@ -262,8 +262,8 @@ bool handle_command(command_t* cmd){
 			echo(command_list, &c_index, next_r_index);
 		    } else {
 			status = execute(command_list, &c_index, next_r_index, command_list.run_in_bg);
-			if(status == E_BIN_MISSING){
-			  fprintf(stderr, "Could not find %s\n", command_list.char_arr[c_index]);
+			if(status != 0){
+			    perror("The following error occurred");
 			}
 		    }
 		    
