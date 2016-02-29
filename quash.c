@@ -431,9 +431,9 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
     pid_t exec_proc; 
 
     char** args;
-    int i, j, k, status;
+    int j, k, status;
     
-    args = (char**) malloc(i * sizeof(char*));
+    args = (char**) malloc( (stop_index - *start_index) * sizeof(char*)); //malloc(i * sizeof(char*));
     for(j = *start_index, k = 0; j < stop_index; j++, k++){
 	args[k]  = malloc_command();
 	expand_buff_with_vars(args[k], command_list.char_arr[j]);
