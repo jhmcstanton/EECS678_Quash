@@ -203,7 +203,6 @@ bool handle_command(command_t* cmd){
 		    if(command_list.r_length > 0){
 			// found a < in the command, this is the priority stdin redirect
 			if(redirect == READ_L && r_index < command_list.r_length && r_index + 1 < command_list.length){
-			    printf("opening file %s for stdin \n", command_list.char_arr[r_index + 1]);			    
 			    input_file = open(command_list.char_arr[r_index + 1], O_RDONLY);
 			    
 			    if(input_file < 0){
