@@ -85,7 +85,7 @@ typedef struct str_arr {
  */ 
 typedef struct job_t {
     pid_t pid; 
-    int jid;
+    //    int jid;
     char command[MAX_COMMAND_LENGTH];
 } job_t;
 
@@ -206,6 +206,12 @@ void print_jobs();
  * @param command - the command, minus arguments, that is being run
  */
 void log_job(pid_t proc_id, char* command);
+
+/**
+ * Checks all background jobs from the global jobs list. If anything has EXITed the waitpid
+ * call *should* reap it, and every job with a higher job id (index) will be shifted left by 1
+ */
+void check_all_jobs();
 
 
 /**

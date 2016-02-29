@@ -56,6 +56,9 @@ static void maintenance(){
     sprintf(terminal_prompt, "Quash![%s@%s %s]$ ", getlogin(), hostname, cwd);
     free(cwd);
     free(hostname);
+
+    // Woo, all job stuff
+    check_all_jobs();
 }
 /**
  * Start the main loop by setting the running flag to true
@@ -86,17 +89,33 @@ void terminate() {
 void print_jobs(){
     int i;
     for(i = 0; i < next_new_job; i++) {
-	printf("[%d] %d %s", jobs[i].jid, jobs[i].pid, jobs[i].command);
+	printf("[%d] %d %s", i, jobs[i].pid, jobs[i].command);
     }
 }
 
 void log_job(pid_t proc_id, char* command){
     if(next_new_job < MAX_NUM_JOBS){
-	jobs[next_new_job].jid = next_new_job;
+	//	jobs[next_new_job].jid = next_new_job;
 	jobs[next_new_job].pid = proc_id;
 	strcpy(jobs[next_new_job++].command, command);
     } else {
 	fprintf(stderr, "Exceeding max number of jobs (%d)!\n Not logging new job.\n", MAX_NUM_JOBS);
+    }
+}
+
+void check_all_jobs(){
+    int i, back_track, status;    
+    for(i = 0; i < next_new_job; i++){
+	waitpid(jobs[i].pid, &status, WNOHANG);
+	if(WIFEXITED(status)){
+	    // next process to look at will have the same index as this one had
+	    back_track = i - 1;
+	    for(; i < next_new_job - 1; i++){
+		jobs[i] = jobs[i + 1];
+	    }
+	    next_new_job--;
+	    i = back_track; 
+	}
     }
 }
 
