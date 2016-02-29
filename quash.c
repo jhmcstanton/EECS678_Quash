@@ -89,9 +89,11 @@ void terminate() {
  **************************************************************************/
 
 void print_jobs(){
+    // do one more quick check before printing jobs so most up-to-date info is available
+    check_all_jobs();
     int i;
     for(i = 0; i < next_new_job; i++) {
-	printf("[%d] %d %s", i, jobs[i].pid, jobs[i].command);
+	printf("[%d] %d %s\n", i, jobs[i].pid, jobs[i].command);
     }
 }
 
@@ -106,10 +108,10 @@ void log_job(pid_t proc_id, char* command){
 }
 
 void check_all_jobs(){
-    int i, back_track, status;    
+    int i, back_track, status;
     for(i = 0; i < next_new_job; i++){
-	waitpid(jobs[i].pid, &status, WNOHANG);
-	if(WIFEXITED(status)){
+
+	if(waitpid(jobs[i].pid, &status, WNOHANG) != 0){
 	    // next process to look at will have the same index as this one had
 	    back_track = i - 1;
 	    for(; i < next_new_job - 1; i++){
@@ -256,7 +258,7 @@ bool handle_command(command_t* cmd){
 		    // returns 0 if executable was found otherwise
 		    // 1 if it was missing
 		    exit(status == E_BIN_MISSING ? 1 : 0); 
-		} else if(waitpid(pid, &status, 0) == -1){
+		} else if(!command_list.run_in_bg && waitpid(pid, &status, 0) == -1){
 		    fprintf(stderr, "Process encountered an error. ERROR%d", errno);
 		    terminate();
 		    for(i = 0; i < command_list.r_length; i++){
@@ -267,7 +269,7 @@ bool handle_command(command_t* cmd){
 
 		    close(pipe_fds[r_index][1]);		    
 		    exit(EXIT_FAILURE);
-		} else if(WEXITSTATUS(status) > 0){
+		} else if(!command_list.run_in_bg && WEXITSTATUS(status) > 0){
 		    // do some cleanup then stop dealing with the command since something broke
 		    if(command_list.r_length > 0){
 			if(r_index > 0){
@@ -281,6 +283,7 @@ bool handle_command(command_t* cmd){
 		} else { // successful
 		    // log job if necessary
 		    if(command_list.run_in_bg){
+			printf("Running %s in background.\n", command_list.char_arr[c_index]);
 			log_job(pid, command_list.char_arr[c_index]);
 		    }
 
@@ -437,13 +440,14 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
     
     if(exec_proc == 0){
 	args[j] = NULL;
-
-	if(run_in_bg){
+	
+	/*if(run_in_bg){
 	    // when running things in the background we can just eat the output
 	    int hole = open("/dev/null", O_WRONLY);
 	    dup2(hole, STDOUT_FILENO);
 	    close(hole);
-	}
+	}*/
+
 	status = execvp(args[0], args);
 	free_str_arr(&command_list);
 	terminate();
@@ -453,7 +457,7 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
 	}
 	free(args);
 	exit(status);
-    } else if(!run_in_bg){
+    } else {
 	if(waitpid(exec_proc, &status, 0) == -1){
 	    printf("Error in process: %d\n", exec_proc);
 	}	    
