@@ -53,7 +53,9 @@ static void maintenance(){
     // getlogin() causes a "reachable" memory leak according to
     // valgrind, which is apparently ok: http://valgrind.org/docs/manual/faq.html#faq.deflost
     // memory lost - 1,718 Bytes in 5 blocks
-    sprintf(terminal_prompt, "Quash![%s@%s %s]$ ", getlogin(), hostname, cwd);
+    if(isatty(fileno(stdin))){
+	sprintf(terminal_prompt, "Quash![%s@%s %s]$ ", getlogin(), hostname, cwd);
+    }
     free(cwd);
     free(hostname);
 
@@ -220,17 +222,22 @@ bool handle_command(command_t* cmd){
 		    if((redirect != READ_L && next_r_index < command_list.length) || 
 		       (redirect == READ_L && next_r_index < command_list.length - 1)){ // hopefully accounts for commands with a middle <
 			dup2(pipe_fds[r_index][1], STDOUT_FILENO); // upcoming redirect requires pipe
-		    } 
+		    } else if(command_list.run_in_bg){
+			// hide this output if it is last AND it is to be run in the background
+			int hole = open("/dev/null", O_WRONLY);
+			dup2(hole, STDOUT_FILENO);
+			close(hole);			
+		    }
 
 		    if(!strcmp(cursor, "pwd")){
 			pwd();
 		    } else if(!strcmp(cursor, "jobs")){
-			
+			print_jobs();			
 		    } else if(!strcmp(cursor, "echo")){
 			echo(command_list, &c_index, next_r_index);
 			// ignores pipes and redirects right now 
 		    } else {
-			status = execute(command_list, &c_index, next_r_index);
+			status = execute(command_list, &c_index, next_r_index, command_list.run_in_bg);
 			if(status == E_BIN_MISSING){
 			  fprintf(stderr, "Could not find %s\n", command_list.char_arr[c_index]);
 			}
@@ -272,10 +279,13 @@ bool handle_command(command_t* cmd){
 		    }
 		    break;
 		} else { // successful
+		    // log job if necessary
+		    if(command_list.run_in_bg){
+			log_job(pid, command_list.char_arr[c_index]);
+		    }
+
 		    // not sure whethere the ...].r_index case should have -1 or - 0
-		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index - 1 : command_list.length;
-
-
+		    c_index = r_index < command_list.r_length ? command_list.redirects[r_index].r_index - 1 : command_list.length;	     
 		    // general redirect case 
 		    if(command_list.r_length > 0){
 			// done writing to this pipe
@@ -410,22 +420,15 @@ redirect which_redirect(char* str){
     return -1;
 }
 
-int execute(str_arr command_list, int *start_index, int stop_index){
+int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_bg){
     char* full_exec_path = malloc_command();
     pid_t exec_proc; 
 
     char** args;
     int i, j, k, status;
-    bool run_in_bg = false;
     
-    for(i = *start_index; i < stop_index; i++){
-	if(!strcmp(command_list.char_arr[i], "&")){ 
-	    run_in_bg = true;
-	    break;
-	}	    
-    }
     args = (char**) malloc(i * sizeof(char*));
-    for(j = *start_index, k = 0; j < i; j++, k++){
+    for(j = *start_index, k = 0; j < stop_index; j++, k++){
 	args[k]  = malloc_command();
 	expand_buff_with_vars(args[k], command_list.char_arr[j]);
     }
@@ -525,15 +528,13 @@ char* get_env_var(int *start_index, char* buffer_with_var){
     return var_buffer;
 }
 
-/************************************************
- PRETTY SURE THE MEM LEAK IS FROM THE PASSWD STRUCT HERE
-********************************************************************/
 void get_home_dir(char* buffer){    
     buffer = strcpy(buffer, getenv("HOME"));
 }
 
 str_arr mk_str_arr(command_t* cmd){
     str_arr commands;
+    commands.run_in_bg = false; // default case
     bool last_space_was_delim = false, found_quote = false; // so commands can be more than one ' ' apart or surrounded by "
     int i, whitespace_count = 0, command_len = 0, redirect_index = 0;
     redirect found_redirect;
@@ -569,6 +570,14 @@ str_arr mk_str_arr(command_t* cmd){
 		i++; // increment past the second > or <
 	    }
 	    last_space_was_delim = true;
+	} else if(cmd->cmdstr[i] == '&'){ 
+	    // wrap up last command if necessary
+	    if(!last_space_was_delim){ 
+		commands.char_arr[whitespace_count++][command_len] = '\0';
+		command_len = 0;
+	    }
+	    last_space_was_delim = true;
+	    commands.run_in_bg = true;
 	} else { // building component of command
 	    last_space_was_delim = false;
 	    commands.char_arr[whitespace_count][command_len] = cmd->cmdstr[i];
@@ -611,8 +620,10 @@ int main(int argc, char** argv) {
       
   start();
   
-  puts("Welcome to Quash!");
-  printf("Type \"exit\" to quit\n%s", terminal_prompt);
+  if(isatty(fileno(stdin))){
+      puts("Welcome to Quash!");
+      printf("Type \"exit\" to quit\n%s", terminal_prompt);
+  }
 
   // Main execution loop
   while (is_running() && get_command(&cmd, stdin)) {
@@ -623,7 +634,9 @@ int main(int argc, char** argv) {
       maintenance();
   }
 
-  printf("Exiting Quash\n");
+  if(isatty(fileno(stdin))){
+      printf("Exiting Quash\n");
+  }
 
   return EXIT_SUCCESS;
 }

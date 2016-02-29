@@ -72,12 +72,14 @@ typedef struct ri_pair{
 
 /**
  * Holds parsed information from a command_t
+ * Holds commands, arguments, redirects and run in background info
  */
 typedef struct str_arr {
     char** char_arr;
     ri_pair* redirects;
     size_t length;
     size_t r_length;
+    bool run_in_bg; 
 } str_arr;
 
 /**
@@ -234,9 +236,10 @@ void cd(str_arr command_list);
  * the binary and any additional ones are passed as arguments
  * @param start_index - the index where the binary execute begins (star_index is the binary)
  * @param stop_index  - the index of the final argument to the executable
+ * @param run_in_bg - whether this should wait on the executable or not
  * @returns the integer return status of the executable
  */
-int execute(str_arr command_list, int *start_index, int stop_index);
+int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_bg);
 
 /**
  * Fills a provided buffer with the fully expanded command provided after performing 

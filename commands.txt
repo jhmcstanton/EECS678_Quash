@@ -1,0 +1,6 @@
+echo command 1 (cat)
+cat quash.c
+echo command 2 (ls)
+ls
+echo command 3 (ls | more)
+ls | more
