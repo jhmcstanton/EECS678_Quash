@@ -28,7 +28,6 @@ static char *redirects[redirect_ct] = { "|", ">>", ">", "<"};
 static job_t jobs[MAX_NUM_JOBS];
 static size_t next_new_job = 0;
 
-
 /**************************************************************************
  * Private Functions 
  **************************************************************************/
@@ -77,7 +76,6 @@ static void start() {
   maintenance();
 }
 
-
 /**************************************************************************
  * Public Functions 
  **************************************************************************/
@@ -92,7 +90,6 @@ void terminate() {
 /**************************************************************************
  * Job Stuff
  **************************************************************************/
-
 void print_jobs(){
     int i;
     for(i = 0; i < next_new_job; i++) {
@@ -142,8 +139,6 @@ void check_all_jobs(){
 	}
     }
 }
-
-/* ********************************************************************** */
 
 
 bool get_command(command_t* cmd, FILE* in) {
@@ -201,7 +196,6 @@ bool handle_command(command_t* cmd){
 
 	    for(c_index = 0, r_index = 0; c_index < command_list.length; c_index++, r_index++){
 		cursor = command_list.char_arr[c_index];
-//		printf("c_i: %d, r_i: %d, cursor: %s\n", c_index, r_index, cursor);
 
 		// make sure any required pipe opens correctly
 		if(command_list.r_length > 0 && r_index < command_list.r_length && pipe(pipe_fds[r_index]) == -1){
@@ -211,7 +205,7 @@ bool handle_command(command_t* cmd){
 		    free_str_arr(&command_list);
 		    exit(EXIT_FAILURE);
 		}
-		// remove this
+
 		if(r_index < command_list.r_length){
 		    redirect = command_list.redirects[r_index].redirect;
 		}
@@ -238,6 +232,7 @@ bool handle_command(command_t* cmd){
 			    dup2(pipe_fds[r_index - 1][0], STDIN_FILENO); // commands after first read from previous output pipe      
 			}
 		    }
+		    
 		    if(command_list.r_length > 0 && r_index < command_list.r_length){
 			close(pipe_fds[r_index][0]); // this process will be reading from the previous pipe
 		    }
@@ -348,7 +343,6 @@ bool handle_command(command_t* cmd){
     free(pipe_fds);
     free_str_arr(&command_list);    
     return true;
-	
 }
 
 bool validate(str_arr *command_list){
@@ -399,7 +393,6 @@ void set(str_arr command_list){
 	char* variable_val  = malloc_command();
 	bool found_equals   = false;
 	int i, j = 0;
-	     
 	
 	for(i = 0; cursor[i] != '\0'; i++){
 	    if(found_equals){ // working on VALUE
@@ -454,7 +447,6 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
     for(j = *start_index, k = 0; j < stop_index; j++, k++){
 	args[k]  = malloc_command();
 	expand_buff_with_vars(args[k], command_list.char_arr[j]);
-	//fprintf(stderr, "arg: %d, arg_str: %s, in position: %d\n", k, args[k], j);
     }
 
     exec_proc = fork();
@@ -465,8 +457,8 @@ int execute(str_arr command_list, int *start_index, int stop_index, bool run_in_
     } else if(waitpid(exec_proc, &status, 0) == -1){	
 	fprintf(stderr, "Error in process: %d\n", exec_proc);
     }
+    
     // free all args
-
     for(j = 0; j < k; j++){
 	free(args[j]);
     }
